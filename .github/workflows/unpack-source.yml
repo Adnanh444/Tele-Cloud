@@ -1,0 +1,18 @@
+name: Unpack
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          unzip -q -o *.zip -d .
+          rm -f *.zip .github/workflows/unpack-source.yml
+          chmod +x gradlew
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: import Memora Cloud source"
+          git push
