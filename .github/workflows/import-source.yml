@@ -1,9 +1,11 @@
 name: Import source
 
 # Unpacks MemoraCloud-source.zip from the repository root into the repository and commits it.
-# Re-runnable: run it again after uploading a newer archive.
-# It never touches .github/ (GitHub's token is not allowed to change workflow files), and it writes
-# its result to the run's Summary page, so there is nothing to read in the log.
+# Re-runnable: upload a newer archive and run it again. It never touches .github/ (GitHub's token is
+# not allowed to change workflow files).
+#
+# Every step writes its outcome to the run's Summary page, including the exact command and its
+# output when something fails, so the log never has to be read on a phone.
 #
 # Needs Settings -> Actions -> General -> Workflow permissions = "Read and write permissions".
 on: workflow_dispatch
@@ -22,47 +24,42 @@ jobs:
 
       - name: Import
         run: |
+          # Actions already runs this with -e; turn that off so every failure can be reported
+          # instead of aborting the script with a bare exit code.
+          set +e
           set -uo pipefail
           S="$GITHUB_STEP_SUMMARY"
           say() { echo "$1" >> "$S"; }
+          fail() { say "- ❌ $1"; [ -n "${2:-}" ] && { say ""; say '```'; echo "$2" | tail -20 >> "$S"; say '```'; }; exit 1; }
+
           say "## Import report"
           say ""
+
+          # ---------- 1. find the archive ----------
           ZIP=$(find . -maxdepth 2 -iname '*.zip' -not -path './.git/*' | head -1)
-          if [ -z "${ZIP:-}" ]; then
-            say "- ❌ No .zip found at the repository root."
-            say ""
-            say "**Fix:** Code → *Add file → Upload files* → choose \`MemoraCloud-source.zip\` → Commit, then run this workflow again."
-            exit 1
-          fi
+          [ -n "${ZIP:-}" ] || fail "No .zip at the repository root." "Code -> Add file -> Upload files, choose MemoraCloud-source.zip, Commit, then run this again."
           say "- ✅ Archive: \`$ZIP\`"
-          rm -rf /tmp/x && mkdir -p /tmp/x
-          if ! unzip -q -o "$ZIP" -d /tmp/x; then
-            say "- ❌ The archive could not be unzipped."
-            exit 1
-          fi
+
+          # ---------- 2. unpack ----------
+          rm -rf /tmp/x; mkdir -p /tmp/x
+          OUT=$(unzip -q -o "$ZIP" -d /tmp/x 2>&1) || fail "The archive could not be unzipped." "$OUT"
           SRC=/tmp/x
           if [ "$(ls -A /tmp/x | wc -l)" -eq 1 ] && [ -d "/tmp/x/$(ls /tmp/x)" ]; then
             SRC="/tmp/x/$(ls /tmp/x)"
           fi
-          if [ ! -d "$SRC/android" ] || [ ! -d "$SRC/shared" ]; then
-            say "- ❌ That archive has no \`android/\` and \`shared/\` folders."
-            say ""
-            say "**Fix:** upload the file named \`MemoraCloud-source.zip\`."
-            exit 1
-          fi
+          [ -d "$SRC/android" ] && [ -d "$SRC/shared" ] || fail "That archive has no android/ and shared/ folders." "Upload the file named MemoraCloud-source.zip."
           say "- ✅ Unpacked ($(find "$SRC" -name '*.kt' | wc -l) Kotlin files)"
-          tar -C "$SRC" --exclude=.github --exclude='*/build' -cf - . | tar -C . -xf -
+
+          # ---------- 3. copy into the repository (workflows excluded) ----------
+          OUT=$(tar -C "$SRC" --exclude=.github -cf - . | tar -C . -xf - 2>&1) || fail "Copying the files failed." "$OUT"
+          chmod +x gradlew 2>/dev/null
           rm -f "$ZIP"
-          chmod +x gradlew 2>/dev/null || true
-          say "- ✅ Files copied over the repository (workflows left alone)"
+          say "- ✅ Files copied (workflows left alone)"
+
+          # ---------- 4. commit ----------
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            say "- ℹ️ Nothing changed — the repository already matches this archive."
-            exit 0
-          fi
-          git commit -q -m "chore: import Memora Cloud source"
-          if PUSH=$(git push origin "HEAD:${{ github.event.repository.default_branch }}" 2>&1); then
-            say "- ✅ Committed and pushed to main"
-            say ""
+          OUT=$(git add -A 2>&1) || fail "\`git add\` failed." "$OUT"
+          STAGED=$(git diff --cached --name-only | wc -l)
+          say "- ✅ Staged $STAGED changed file(s)"
+          if [ "$STAGED" -eq 0 ]; then
