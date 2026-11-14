@@ -11,23 +11,17 @@ jobs:
           fetch-depth: 0
       - run: |
           set -eu
-          echo "step 1: looking for the archive"
           Z=$(ls *.zip 2>/dev/null | head -1) || true
-          if [ -z "$Z" ]; then echo "FAILED: no .zip at the repo root"; exit 1; fi
+          [ -n "$Z" ] || { echo "FAILED: put the source .zip at the repo root"; exit 1; }
           echo "found $Z"
-          echo "step 2: unpacking"
           unzip -q -o "$Z" -d /tmp/s
           S=$(dirname "$(find /tmp/s -maxdepth 2 -name android -type d | head -1)")
-          echo "source folder: $S"
-          echo "step 3: copying into the repo"
-          tar -C "$S" --exclude=.github -cf - . | tar -xf -
-          rm -f "$Z"
-          chmod +x gradlew
-          echo "step 4: committing"
-          git config user.name "actions"
-          git config user.email "actions@users.noreply.github.com"
+          echo "source: $S"
+          rsync -a --delete --exclude .git --exclude .github "$S"/ ./
+          chmod +x gradlew || true
+          git config user.name actions
+          git config user.email actions@users.noreply.github.com
           git add -A
-          git commit -m "sync Memora Cloud source" || echo "nothing new to commit"
-          echo "step 5: pushing"
+          git commit -m "sync Memora Cloud source" || echo "nothing to commit"
           git push origin "HEAD:$GITHUB_REF_NAME"
-          echo "DONE - source is in main"
+          echo "DONE - repo mirrors the archive"
