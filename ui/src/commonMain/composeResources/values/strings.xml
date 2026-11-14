@@ -636,6 +636,12 @@
 
     <!-- Settings: backup -->
     <string name="settings_add">Add</string>
+    <string name="settings_detected_folders_counts">%1$d photos · %2$d videos · %3$s</string>
+    <string name="settings_detected_folders_title">Detected folders (%1$d)</string>
+    <string name="settings_no_folders_found">Nothing found. Grant photo and video access in Permissions, then tap Search again.</string>
+    <string name="settings_rescan_folders">Search again</string>
+    <string name="settings_rescan_folders_subtitle">Look for folders created after install</string>
+    <string name="settings_scanning_folders">Looking through your device…</string>
     <string name="settings_add_another_folder">Add another folder</string>
     <string name="settings_automatic_backup">Automatic backup</string>
     <string name="settings_back_new_media_instantly">Back up new media instantly</string>

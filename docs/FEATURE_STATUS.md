@@ -4,7 +4,7 @@ Honest state of every requirement in the brief, mapped to the code that implemen
 Legend: **✅ inherited & working** (upstream code, rebranded, kept) · **🆕 added in this fork** ·
 **🚧 planned, not yet written** · **❌ not possible / not provided**
 
-Last updated: Part 2.
+Last updated: Part 3 (folder auto-detection).
 
 ---
 
@@ -35,6 +35,7 @@ Last updated: Part 2.
 | Detect new files, instant backup | ✅ | `MediaStoreWatcher`, `MediaWatchWorker`, `MediaSweepWorker` |
 | Photos, videos, documents, audio, other | ✅ | `FileCategory`, mime mapping |
 | Per-folder backup on/off | ✅ | `backupFolders` + `ExclusionDao` (`ExclusionsScreen`) |
+| Folders detected automatically from the device (incl. new ones) | 🆕 `MediaStoreFolderScanner` → *Settings → Backup → Detected folders* | `docs/PART3_CHANGES.md` |
 | Scheduled / background backup | ✅ | `ScheduledBackupWorker` + `backupIntervalHours` |
 | WorkManager based | ✅ | all workers registered through Koin-WorkManager |
 | Resume interrupted uploads | ✅ | `FilePartEntity`, `PartUploader`, `BackupResumeWorker` |
@@ -139,8 +140,9 @@ mobile upload helper, version override, no desktop jobs.
 * **Part 2 (done):** in-app APK download/verify/install, see `docs/PART2_CHANGES.md`.
 * **Remaining polish:** "Restore everything" wizard, duplicate-protection hardening + tests,
   restore/backup status polish.
-* **Part 3:** on-device AI (image labelling + face detection + semantic search) with its own Room
-  migration, background worker, opt-out setting and manifest storage.
+* **Part 3 — folder auto-detection: done** (`docs/PART3_CHANGES.md`).
+* **Part 3 — on-device AI** (image labelling + face detection + semantic search) with its own Room
+  migration, background worker, opt-out setting and manifest storage: still to come.
 * **Desktop apps:** the module is still in the tree but no longer built or supported here.
 * **Localisation of new strings** beyond English.
 * **Silent self-update:** not possible without system privileges; Android will always show the

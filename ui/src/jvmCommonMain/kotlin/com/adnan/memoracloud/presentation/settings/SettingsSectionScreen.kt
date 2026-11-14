@@ -31,6 +31,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,6 +85,12 @@ import com.adnan.memoracloud.resources.settings_cache_limit
 import com.adnan.memoracloud.resources.settings_cached_previews_thumbnails_temporary
 import com.adnan.memoracloud.resources.settings_change_passphrase
 import com.adnan.memoracloud.resources.settings_choose_folder_device
+import com.adnan.memoracloud.resources.settings_detected_folders_counts
+import com.adnan.memoracloud.resources.settings_detected_folders_title
+import com.adnan.memoracloud.resources.settings_no_folders_found
+import com.adnan.memoracloud.resources.settings_rescan_folders
+import com.adnan.memoracloud.resources.settings_rescan_folders_subtitle
+import com.adnan.memoracloud.resources.settings_scanning_folders
 import com.adnan.memoracloud.resources.settings_clear_cache_action
 import com.adnan.memoracloud.resources.settings_clear_cache_title
 import com.adnan.memoracloud.resources.settings_clear_thumbnails_action
@@ -177,6 +184,8 @@ import com.adnan.memoracloud.resources.settings_download_location_reset
 import com.adnan.memoracloud.resources.settings_free_up_none
 import com.adnan.memoracloud.resources.settings_free_up_subtitle
 import com.adnan.memoracloud.presentation.platform.LocalDeleteConsentLauncher
+import com.adnan.memoracloud.presentation.platform.DeviceFolder
+import com.adnan.memoracloud.presentation.platform.LocalDeviceFolderScanner
 import com.adnan.memoracloud.presentation.platform.LocalStandardFolders
 import com.adnan.memoracloud.presentation.platform.LocalDeviceOwnerGate
 import com.adnan.memoracloud.presentation.platform.LocalFileSharer
@@ -543,7 +552,26 @@ private fun BackupSection(
 
     val standardFolders = LocalStandardFolders.current
     val standardPaths = standardFolders.map { it.path }.toSet()
-    val customFolders = backupFolders.filterNot { it in standardPaths }
+
+    // What the device actually has, rescanned whenever this screen is opened or "Search again" is
+    // tapped, so a folder created after install shows up without reinstalling or rebooting.
+    val scanner = LocalDeviceFolderScanner.current
+    var detected by remember(scanner) { mutableStateOf<List<DeviceFolder>?>(null) }
+    var scanning by remember(scanner) { mutableStateOf(false) }
+    var scanRound by remember(scanner) { mutableIntStateOf(0) }
+    LaunchedEffect(scanner, scanRound) {
+        val active = scanner ?: return@LaunchedEffect
+        scanning = true
+        detected = active.scan()
+        scanning = false
+    }
+    val detectedFolders = detected.orEmpty()
+    val detectedPaths = detectedFolders.map { it.path }.toSet()
+
+    // Every detected folder stays in the list, ticked or not, so it can always be un-ticked.
+    val otherDetected = detectedFolders.filterNot { it.path in standardPaths }
+    val customFolders = backupFolders.filterNot { it in standardPaths || it in detectedPaths }
+
     SettingsGroup {
         standardFolders.forEach { folder ->
             add {
@@ -561,6 +589,39 @@ private fun BackupSection(
                 )
             }
         }
+        if (otherDetected.isNotEmpty()) {
+            add {
+                SettingsClickRow(
+                    title = stringResource(
+                        Res.string.settings_detected_folders_title,
+                        otherDetected.size
+                    ),
+                    subtitle = stringResource(Res.string.settings_rescan_folders_subtitle),
+                    onClick = { scanRound++ }
+                )
+            }
+            otherDetected.forEach { folder ->
+                add {
+                    SettingsSwitchRow(
+                        title = folder.name,
+                        subtitle = stringResource(
+                            Res.string.settings_detected_folders_counts,
+                            folder.photoCount,
+                            folder.videoCount,
+                            folder.path
+                        ),
+                        checked = folder.path in backupFolders,
+                        onChange = { checked ->
+                            if (checked) {
+                                viewModel.addBackupFolder(folder.path)
+                            } else {
+                                viewModel.removeBackupFolder(folder.path)
+                            }
+                        }
+                    )
+                }
+            }
+        }
         customFolders.forEach { folder ->
             add {
                 SettingsClickRow(
@@ -575,6 +636,17 @@ private fun BackupSection(
                 title = stringResource(Res.string.settings_add_another_folder),
                 subtitle = stringResource(Res.string.settings_choose_folder_device),
                 onClick = { onPickBackupFolder() }
+            )
+        }
+        add {
+            SettingsClickRow(
+                title = stringResource(Res.string.settings_rescan_folders),
+                subtitle = when {
+                    scanning -> stringResource(Res.string.settings_scanning_folders)
+                    detectedFolders.isEmpty() -> stringResource(Res.string.settings_no_folders_found)
+                    else -> stringResource(Res.string.settings_rescan_folders_subtitle)
+                },
+                onClick = { scanRound++ }
             )
         }
     }
