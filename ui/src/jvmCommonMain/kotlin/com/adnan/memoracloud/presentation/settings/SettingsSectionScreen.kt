@@ -232,7 +232,6 @@ fun SettingsSectionScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmLogout by remember { mutableStateOf(false) }
-    var showRestoreDialog by remember { mutableStateOf(false) }
     var confirmClearCache by remember { mutableStateOf(false) }
 
     val deleteConsentLauncher = LocalDeleteConsentLauncher.current
@@ -322,19 +321,6 @@ fun SettingsSectionScreen(
         }
     }
 
-    if (showRestoreDialog) {
-        val plan by viewModel.restorePlan.collectAsStateWithLifecycle()
-        RestoreDialog(
-            plan = plan,
-            onScopeChange = viewModel::loadRestorePlan,
-            onConfirm = { scope, onlyMissing ->
-                showRestoreDialog = false
-                viewModel.startRestore(scope, onlyMissing)
-            },
-            onDismiss = { showRestoreDialog = false }
-        )
-    }
-
     if (confirmLogout) {
         ConfirmDialog(
             title = stringResource(Res.string.settings_log_telegram),
@@ -371,6 +357,20 @@ private fun AccountSection(
     onLogout: () -> Unit
 ) {
     val indexedSoFar by viewModel.indexedSoFar.collectAsStateWithLifecycle()
+    var showRestoreDialog by remember { mutableStateOf(false) }
+
+    if (showRestoreDialog) {
+        val plan by viewModel.restorePlan.collectAsStateWithLifecycle()
+        RestoreDialog(
+            plan = plan,
+            onScopeChange = viewModel::loadRestorePlan,
+            onConfirm = { scope, onlyMissing ->
+                showRestoreDialog = false
+                viewModel.startRestore(scope, onlyMissing)
+            },
+            onDismiss = { showRestoreDialog = false }
+        )
+    }
 
     SettingsGroup {
         add {
