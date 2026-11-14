@@ -176,6 +176,30 @@ def main():
                 continue
             problems.append(f"{rel}: import {imp} does not resolve")
 
+    # 7. Lost headers: a file must still declare its package, and the handful of symbols that are
+    #    only visible through an import must actually be imported. Editing a file by replacing its
+    #    top section silently deleted the whole import block once, so this is now enforced.
+    required_imports = {
+        "Migration(": "androidx.room.migration.Migration",
+        "SQLiteConnection": "androidx.sqlite.SQLiteConnection",
+        "execSQL(": "androidx.sqlite.execSQL",
+        "SelectionContainer": "androidx.compose.foundation.text.selection.SelectionContainer",
+    }
+    for path in files:
+        try:
+            text = open(path, encoding="utf-8").read()
+        except Exception:  # noqa: BLE001
+            continue
+        relative = os.path.relpath(path, ROOT)
+        if not re.search(r"^package\s+[\w.]+", text, re.M):
+            problems.append(f"{relative}: no package declaration")
+        for symbol, needed in required_imports.items():
+            if symbol not in text:
+                continue
+            if f"import {needed}" in text:
+                continue
+            problems.append(f"{relative}: uses {symbol} but does not import {needed}")
+
     # 6. XML validity
     patterns = [
         "android/src/main/res/**/*.xml",

@@ -1,3 +1,9 @@
+package com.adnan.memoracloud.data.local.database
+
+import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
+
 /**
  * Version 19 was the schema 1.0.6 shipped, and it still contained the on-device AI tables
  * (`photo_labels` from the photo tagger, `faces`/`people`/`face_scans` from face groups).
