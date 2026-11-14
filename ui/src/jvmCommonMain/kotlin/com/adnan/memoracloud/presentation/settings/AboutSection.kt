@@ -43,6 +43,9 @@ import com.adnan.memoracloud.resources.about_source_code
 import com.adnan.memoracloud.resources.about_source_code_summary
 import com.adnan.memoracloud.resources.about_tagline
 import com.adnan.memoracloud.resources.about_update_ready
+import com.adnan.memoracloud.resources.about_update_ready_install
+import com.adnan.memoracloud.resources.about_update_downloading
+import com.adnan.memoracloud.resources.about_update_verifying
 import com.adnan.memoracloud.resources.about_version
 import com.adnan.memoracloud.resources.app_name
 import com.adnan.memoracloud.core.update.AppLinks
