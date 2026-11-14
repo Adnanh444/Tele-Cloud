@@ -4,7 +4,7 @@ Honest state of every requirement in the brief, mapped to the code that implemen
 Legend: **✅ inherited & working** (upstream code, rebranded, kept) · **🆕 added in this fork** ·
 **🚧 planned, not yet written** · **❌ not possible / not provided**
 
-Last updated: Part 1.
+Last updated: Part 2.
 
 ---
 
@@ -110,11 +110,13 @@ Duplicate protection toggle and AI toggle are 🚧 Part 2 / Part 3 additions.
 ## 9. In-app updates
 | Requirement | State |
 | --- | --- |
-| Check GitHub Releases for `Adnanh444/Tele-Cloud` | ✅ (re-pointed in Part 1) |
-| Show version + notes | ✅ (`UpdateDialog`) |
-| Download the APK inside the app | 🚧 Part 2 |
-| Verify SHA-256 + signing certificate | 🚧 Part 2 (CI already publishes `SHA256SUMS.txt` + `update.json`) |
-| Install through Android's package installer, no silent install | 🚧 Part 2 — will use `FileProvider` + `ACTION_VIEW`; silent install is impossible without a privileged installer, and will not be claimed |
+| Check GitHub Releases for `Adnanh444/Tele-Cloud` | ✅ (`UpdateChecker`, reads the `update.json` asset released by CI) |
+| Show version + notes | ✅ (`UpdateDialog`, notes rendered as Markdown) |
+| Download the APK inside the app | ✅ (`ApkUpdateInstaller` + `UpdateDownloadWorker`, resumable, retried 3x, survives leaving the app) |
+| Verify SHA-256 + signing certificate | ✅ hash from `update.json`; signer digest compared with the installed package before the installer is offered |
+| Install through Android's package installer, no silent install | ✅ `FileProvider` + `ACTION_VIEW`, with the "install unknown apps" permission flow. Silent install is impossible without a privileged installer and is not claimed |
+| Progress + cancel + retry + honest failure messages | ✅ (`UpdateInstallState`) |
+| Notification when the APK is ready | ✅ `notifyUpdateReady` on the existing *Updates* channel |
 | Data preserved by keeping id + signing key, increasing versionCode | ✅ CI (`versionCode = 1000 + run number`) |
 | No secrets in the repo | ✅ |
 
@@ -134,8 +136,9 @@ mobile upload helper, version override, no desktop jobs.
 ---
 
 ## Not implemented, and why
-* **Part 2 (next):** in-app APK download/verify/install, "Restore everything" wizard, duplicate
-  protection hardening + tests, restore/backup status polish.
+* **Part 2 (done):** in-app APK download/verify/install, see `docs/PART2_CHANGES.md`.
+* **Remaining polish:** "Restore everything" wizard, duplicate-protection hardening + tests,
+  restore/backup status polish.
 * **Part 3:** on-device AI (image labelling + face detection + semantic search) with its own Room
   migration, background worker, opt-out setting and manifest storage.
 * **Desktop apps:** the module is still in the tree but no longer built or supported here.

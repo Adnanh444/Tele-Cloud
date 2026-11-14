@@ -8,8 +8,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * An anonymous read of a public endpoint, so a check reveals no more than visiting the releases
- * page.
+ * An anonymous read of public endpoints, so a check reveals no more than visiting the releases
+ * page. The APK itself is downloaded later, by the platform layer, and verified there.
  */
 class UpdateChecker(
     private val currentVersion: String
@@ -18,7 +18,7 @@ class UpdateChecker(
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun newerRelease(): AppRelease? = withContext(Dispatchers.IO) {
-        val payload = runCatching { fetchLatest() }
+        val payload = runCatching { fetch(RELEASES_URL) }
             .onFailure { SafeLog.w(TAG, "Update check failed", it) }
             .getOrNull()
             ?: return@withContext null
@@ -31,19 +31,44 @@ class UpdateChecker(
         val latest = release.tag.removePrefix("v").trim()
         if (!isNewer(latest, currentVersion)) return@withContext null
 
+        // update.json is optional: without it the app still offers the download, just without a
+        // published hash to compare against (the signature check still runs).
+        val manifest = release.assets
+            .firstOrNull { it.name == MANIFEST_NAME }
+            ?.let { asset ->
+                runCatching {
+                    json.decodeFromString(
+                        ReleaseManifest.serializer(),
+                        fetch(asset.downloadUrl)
+                    )
+                }.onFailure { SafeLog.w(TAG, "update.json unreadable", it) }.getOrNull()
+            }
+
+        val apkAsset = manifest?.apk
+            ?.let { wanted -> release.assets.firstOrNull { it.name == wanted } }
+            ?: release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
+
         AppRelease(
             version = latest,
             notes = release.body.orEmpty().trim(),
-            pageUrl = release.pageUrl
+            pageUrl = release.pageUrl,
+            apkUrl = apkAsset?.downloadUrl,
+            apkName = apkAsset?.name,
+            sha256 = manifest?.sha256
+                ?.trim()
+                ?.lowercase()
+                ?.takeIf { it.length == SHA256_HEX_LENGTH },
+            versionCode = manifest?.versionCode,
+            sizeBytes = apkAsset?.size ?: 0L
         )
     }
 
-    private fun fetchLatest(): String {
-        val connection = (URL(RELEASES_URL).openConnection() as HttpURLConnection).apply {
+    private fun fetch(url: String): String {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
-            setRequestProperty("Accept", "application/vnd.github+json")
+            setRequestProperty("Accept", "application/vnd.github+json, application/json")
             setRequestProperty("User-Agent", USER_AGENT)
         }
         return try {
@@ -77,6 +102,8 @@ class UpdateChecker(
         const val RELEASES_URL =
             "https://api.github.com/repos/Adnanh444/Tele-Cloud/releases/latest"
         const val USER_AGENT = "MemoraCloud"
+        const val MANIFEST_NAME = "update.json"
+        const val SHA256_HEX_LENGTH = 64
         const val TIMEOUT_MS = 15_000
     }
 }

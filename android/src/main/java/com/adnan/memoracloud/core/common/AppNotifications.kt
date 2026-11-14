@@ -70,6 +70,24 @@ class AppNotifications(
         }
     }
 
+    /** Unlike [notifyUpdate], this one means the APK is on the device and verified. */
+    @SuppressLint("MissingPermission")
+    fun notifyUpdateReady(message: String) {
+        if (!hasPermission()) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_UPDATES)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.notification_update_ready_title))
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setContentIntent(screenIntent(DESTINATION_UPDATE, REQUEST_UPDATE_READY))
+            .setAutoCancel(true)
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context)
+                .notify(NOTIFICATION_ID_UPDATE_READY, notification)
+        }
+    }
+
     private fun skipIntent(version: String): PendingIntent {
         val intent = Intent(context, UpdateSkipReceiver::class.java)
             .putExtra(EXTRA_VERSION, version)
@@ -149,6 +167,7 @@ class AppNotifications(
         private const val REQUEST_QUEUE = 3
         private const val REQUEST_UPDATE = 4
         private const val REQUEST_SKIP = 5
+        private const val REQUEST_UPDATE_READY = 6
         const val CHANNEL_TRANSFERS = "transfers"
         const val CHANNEL_BACKUP = "backup"
         const val CHANNEL_FAILURES = "failures"
@@ -158,5 +177,6 @@ class AppNotifications(
         const val NOTIFICATION_ID_FAILURE = 1003
         const val NOTIFICATION_ID_UPDATE = 1004
         const val NOTIFICATION_ID_PUBLISH = 1005
+        const val NOTIFICATION_ID_UPDATE_READY = 1006
     }
 }

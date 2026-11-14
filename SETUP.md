@@ -15,22 +15,42 @@ app (update checks read `github.com/Adnanh444/Tele-Cloud`).
 4. Do **not** add a README, .gitignore or license — an empty repo imports cleanly
 5. **Create repository**
 
-## 2. Upload this project
+## 2. The `.github/` catch (read this before uploading)
 
-1. On the empty repo page tap **uploading an existing file** (or *Add file → Upload files*)
-2. Pick `MemoraCloud-source.zip` (≈2 MB) from your phone's Downloads
-3. **Commit changes**
+GitHub's built-in `GITHUB_TOKEN` is **never** allowed to create or change files under
+`.github/workflows/`. The archive contains those files, so a plain "unzip + git push" workflow
+fails at the push step with *"refusing to allow a GitHub App to create or update workflow …"* —
+the unzip and commit look successful, but nothing reaches the repository.
 
-## 3. Let Actions write (once)
+Pick one of the two ways around it:
+
+### Way A — personal token (does everything automatically)
+1. <https://github.com/settings/personal-access-tokens/new> → *Repository access:* only
+   `Tele-Cloud` → *Permissions:* **Contents: Read and write** and **Workflows: Read and write** →
+   Generate, copy the token.
+2. Repository → *Settings → Secrets and variables → Actions → New repository secret*:
+   name `WORKFLOW_PAT`, value the token.
+3. Create `.github/workflows/unpack-source.yml` by hand (copy the file of that name from the
+   download folder), commit it, upload the ZIP, then run
+   **Actions → Import source archive**.
+
+### Way B — no token (paste one workflow, everything else automatic)
+Upload the ZIP, then create **one** file by hand:
+`.github/workflows/android.yml`, with the content of `android.yml` from the download folder.
+That single file provides Build, Release and keystore generation, and it never writes to
+`.github/`, so the default token is enough.
+
+> Only use one of the two ways. Way A gives you the three separate workflows; Way B gives you the
+> single combined one. Installing both would create duplicate runs.
+
+## 3. Let Actions write
 
 *Settings → Actions → General → Workflow permissions →* **Read and write permissions** → **Save**
 
-## 4. Unpack it
+## 4. Verify the import
 
-**Actions** tab → **Import source archive** → **Run workflow** → branch `main` → **Run workflow**
-
-After ~30 s the Code tab shows `android/`, `shared/`, `ui/`, `gradle/`, `.github/`, `docs/`.
-The ZIP and that helper workflow delete themselves.
+Code tab must show `android/`, `shared/`, `ui/`, `gradle/` and `docs/`. If it does not, the push was
+rejected — re-read step 2.
 
 ## 5. Prove the build works
 

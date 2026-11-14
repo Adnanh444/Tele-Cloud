@@ -26,13 +26,28 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Architecture packaging:
+    //   (default)                                 -> one APK per ABI plus a universal APK
+    //   -PsplitAbis=true -Pabis=arm64-v8a         -> a single ~28 MB APK for modern phones
+    //   -PsplitAbis=false                        -> one universal APK (~98 MB, all ABIs inside)
+    // Every ABI carries its own copy of the TDLib native library, which is why the universal
+    // APK is roughly four times the size of a single-architecture one.
+    val requestedAbis = providers.gradleProperty("abis").orNull
+        ?.split(',')
+        ?.map(String::trim)
+        ?.filter(String::isNotEmpty)
+        .orEmpty()
     val splitAbis = providers.gradleProperty("splitAbis").orNull?.toBoolean() ?: true
     splits {
         abi {
             isEnable = splitAbis
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
-            isUniversalApk = splitAbis
+            include(
+                *(requestedAbis.ifEmpty {
+                    listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+                }).toTypedArray()
+            )
+            isUniversalApk = splitAbis && requestedAbis.isEmpty()
         }
     }
 
@@ -75,7 +90,10 @@ android {
     }
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            // false (default): native libraries stored uncompressed, so the app starts faster.
+            // -PlegacyJniPackaging compresses them instead, which makes the APK roughly 25-30%
+            // smaller to download in exchange for extracting them once at install time.
+            useLegacyPackaging = providers.gradleProperty("legacyJniPackaging").isPresent
         }
     }
 }

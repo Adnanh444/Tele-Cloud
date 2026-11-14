@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +26,7 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.adnan.memoracloud.resources.Res
 import com.adnan.memoracloud.resources.about_auto_check
 import com.adnan.memoracloud.resources.about_auto_check_summary
@@ -47,6 +49,8 @@ import com.adnan.memoracloud.core.update.AppLinks
 import com.adnan.memoracloud.presentation.platform.LocalAppIcon
 import com.adnan.memoracloud.presentation.platform.LocalAppVersion
 import com.adnan.memoracloud.presentation.platform.LocalUrlOpener
+import com.adnan.memoracloud.presentation.platform.LocalUpdateInstaller
+import com.adnan.memoracloud.presentation.platform.UpdateInstallState
 import com.adnan.memoracloud.presentation.components.UpdateDialog
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -55,6 +59,13 @@ fun AboutSection(state: SettingsUiState, viewModel: SettingsViewModel) {
     val urlOpener = LocalUrlOpener.current
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     val checking = updateState is UpdateState.Checking
+
+    // Android supplies the installer; the desktop builds leave this null and simply open the
+    // release page instead.
+    val installer = LocalUpdateInstaller.current
+    val installState by remember(installer) {
+        installer?.state ?: MutableStateFlow<UpdateInstallState>(UpdateInstallState.Idle)
+    }.collectAsStateWithLifecycle()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -154,14 +165,24 @@ fun AboutSection(state: SettingsUiState, viewModel: SettingsViewModel) {
     }
 
     (updateState as? UpdateState.Available)?.let { available ->
+        val release = available.release
+        val supported = installer != null && installer.supported && release.canInstallInApp
         UpdateDialog(
             currentVersion = LocalAppVersion.current,
+            release = release,
+            installState = installState,
+            inAppInstallSupported = supported,
             onOpenUrl = urlOpener::open,
-            release = available.release,
             onDownload = {
-                viewModel.dismissUpdate()
-                urlOpener.open(available.release.pageUrl)
+                if (supported) {
+                    installer?.download(release)
+                } else {
+                    viewModel.dismissUpdate()
+                    urlOpener.open(release.pageUrl)
+                }
             },
+            onInstall = { installer?.install() },
+            onCancelDownload = { installer?.cancel() },
             onDismiss = viewModel::dismissUpdate
         )
     }

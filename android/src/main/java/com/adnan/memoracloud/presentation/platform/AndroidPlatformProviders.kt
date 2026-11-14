@@ -44,6 +44,7 @@ import java.io.File
 @Composable
 fun ProvidePlatformActions(content: @Composable () -> Unit) {
     val capabilities = koinInject<PlatformCapabilities>()
+    val updateInstaller = koinInject<com.adnan.memoracloud.core.update.ApkUpdateInstaller>()
     val settingsRepository = koinInject<SettingsRepository>()
     val context = LocalContext.current
     val activity = LocalActivity.current
@@ -184,6 +185,7 @@ fun ProvidePlatformActions(content: @Composable () -> Unit) {
         LocalAppIcon provides appIcon,
         LocalStandardFolders provides standardFolders,
         LocalUrlOpener provides urlOpener,
+        LocalUpdateInstaller provides updateInstaller,
         LocalTelegramLinkOpener provides telegramLinkOpener,
         LocalFolderPicker provides folderPicker,
         LocalFilePicker provides filePicker,

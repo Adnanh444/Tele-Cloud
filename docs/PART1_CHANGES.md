@@ -74,6 +74,7 @@ an existing channel is adopted rather than duplicated.
 ### Documentation
 `README.md` (rewritten), `NOTICE` (Apache 2.0 attribution), `CHANGELOG.md`,
 `docs/ARCHITECTURE_AUDIT.md`, `docs/PART1_CHANGES.md` (this file),
+`docs/PART2_CHANGES.md` (in-app updater),
 `docs/FEATURE_STATUS.md`, `docs/GITHUB_MOBILE_SETUP.md`, `docs/SIGNING_AND_RELEASES.md`.
 
 ---

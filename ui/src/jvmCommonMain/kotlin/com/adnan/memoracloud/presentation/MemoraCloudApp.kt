@@ -87,12 +87,15 @@ import com.adnan.memoracloud.presentation.navigation.LocalBottomBarHeight
 import com.adnan.memoracloud.presentation.navigation.Route
 import com.adnan.memoracloud.presentation.navigation.TopLevelDestination
 import com.adnan.memoracloud.presentation.platform.LocalAppVersion
+import com.adnan.memoracloud.presentation.platform.LocalUpdateInstaller
 import com.adnan.memoracloud.presentation.platform.LocalUrlOpener
+import com.adnan.memoracloud.presentation.platform.UpdateInstallState
 import com.adnan.memoracloud.presentation.theme.MemoraCloudTheme
 import com.adnan.memoracloud.presentation.theme.systemDarkTheme
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -186,14 +189,27 @@ fun MemoraCloudApp(
                 SessionBrokenDialog(onSignInAgain = viewModel::resetSession)
             }
             pendingUpdate?.takeIf { !state.loading && !state.locked }?.let { release ->
+                val installer = LocalUpdateInstaller.current
+                val installState by remember(installer) {
+                    installer?.state ?: MutableStateFlow<UpdateInstallState>(UpdateInstallState.Idle)
+                }.collectAsStateWithLifecycle()
+                val supported = installer != null && installer.supported && release.canInstallInApp
                 UpdateDialog(
                     currentVersion = LocalAppVersion.current,
-                    onOpenUrl = urlOpener::open,
                     release = release,
+                    installState = installState,
+                    inAppInstallSupported = supported,
+                    onOpenUrl = urlOpener::open,
                     onDownload = {
-                        viewModel.dismissUpdate()
-                        urlOpener.open(release.pageUrl)
+                        if (supported) {
+                            installer?.download(release)
+                        } else {
+                            viewModel.dismissUpdate()
+                            urlOpener.open(release.pageUrl)
+                        }
                     },
+                    onInstall = { installer?.install() },
+                    onCancelDownload = { installer?.cancel() },
                     onDismiss = viewModel::dismissUpdate
                 )
             }

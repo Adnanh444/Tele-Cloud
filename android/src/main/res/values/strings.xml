@@ -53,6 +53,8 @@
     <string name="notification_transfer_and_more">%1$s and %2$d more</string>
     <string name="notification_transferring_many">Transferring %1$d of %2$d files</string>
     <string name="notification_transfers_active">Transfers running</string>
+    <string name="notification_update_ready_title">Update ready to install</string>
+    <string name="notification_update_ready_message">%1$s is downloaded and verified. Open Memora Cloud to install it.</string>
     <string name="notification_update_message">%1$s %2$s is ready to download</string>
     <string name="notification_update_skip">Skip this version</string>
     <string name="notification_update_title">Update available</string>
