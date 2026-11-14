@@ -1,6 +1,7 @@
 package com.adnan.memoracloud.di
 
 import com.adnan.memoracloud.core.common.commonModule
+import com.adnan.memoracloud.core.compat.legacyWorkersModule
 import com.adnan.memoracloud.core.crypto.cryptoModule
 import com.adnan.memoracloud.core.dispatchers.dispatchersModule
 import com.adnan.memoracloud.core.files.filesModule
@@ -27,6 +28,7 @@ import com.adnan.memoracloud.presentation.presentationModule
 
 val appModules = listOf(
     commonModule,
+    legacyWorkersModule,
     cryptoModule,
     dispatchersModule,
     filesModule,

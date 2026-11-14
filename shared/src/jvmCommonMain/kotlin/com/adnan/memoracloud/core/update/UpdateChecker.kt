@@ -26,39 +26,97 @@ class UpdateChecker(
         else -> null
     }
 
+    /**
+     * Two sources, cheapest and most reliable first:
+     *
+     * 1. `releases/latest/download/update.json` — a plain download link to an asset of the newest
+     *    release. No REST API, so no anonymous rate limit and no quota shared with everyone else on
+     *    the same mobile network.
+     * 2. The REST API, kept as a fallback for releases published without update.json. It allows 60
+     *    anonymous requests per hour per IP, which is why 403 "rate limited" used to break checks.
+     */
     suspend fun check(): UpdateCheck = withContext(Dispatchers.IO) {
+        directCheck()?.let { return@withContext it }
+        apiCheck()
+    }
+
+    /** Reads the manifest the release publishes as a normal asset. Null when unavailable. */
+    private fun directCheck(): UpdateCheck? {
+        val payload = runCatching { fetch(DIRECT_MANIFEST_URL) }
+            .onFailure { error ->
+                SafeLog.d(TAG, "Direct manifest unavailable: ${error.message}")
+            }
+            .getOrNull() ?: return null
+
+        val manifest = runCatching {
+            json.decodeFromString(ReleaseManifest.serializer(), payload)
+        }.getOrElse {
+            SafeLog.w(TAG, "update.json unreadable", it)
+            return null
+        }
+
+        val latest = manifest.version.removePrefix("v").trim()
+        val apkName = manifest.apk?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (latest.isEmpty()) return null
+        if (!isNewer(latest, currentVersion)) {
+            return UpdateCheck.UpToDate(currentVersion, latest)
+        }
+        return UpdateCheck.Available(
+            AppRelease(
+                version = latest,
+                notes = manifest.notes?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: "New version of Memora Cloud, signed and ready to install.",
+                pageUrl = RELEASES_PAGE_URL,
+                apkUrl = "$DIRECT_DOWNLOAD_BASE/$apkName",
+                apkName = apkName,
+                sha256 = manifest.sha256
+                    ?.trim()
+                    ?.lowercase()
+                    ?.takeIf { it.length == SHA256_HEX_LENGTH },
+                versionCode = manifest.versionCode,
+                sizeBytes = manifest.size ?: 0L
+            )
+        )
+    }
+
+    private fun apiCheck(): UpdateCheck {
         val payload = try {
             fetch(RELEASES_URL)
         } catch (error: HttpStatusException) {
             SafeLog.w(TAG, "Update check HTTP ${error.code}")
-            return@withContext UpdateCheck.Failed(
-                if (error.code == HttpURLConnection.HTTP_NOT_FOUND) {
+            return UpdateCheck.Failed(
+                when (error.code) {
                     // GitHub answers 404 both for "no releases" and for a private repository,
                     // because the app never sends credentials.
-                    "no release found (nothing published, or the repository is private)"
-                } else {
-                    "GitHub answered HTTP ${error.code}"
+                    HttpURLConnection.HTTP_NOT_FOUND ->
+                        "no release found (nothing published, or the repository is private)"
+
+                    HttpURLConnection.HTTP_FORBIDDEN ->
+                        "GitHub is limiting how often this network may check (temporary). " +
+                                "Try again in a few minutes."
+
+                    else -> "GitHub answered HTTP ${error.code}"
                 }
             )
         } catch (error: Throwable) {
             SafeLog.w(TAG, "Update check failed", error)
-            return@withContext UpdateCheck.Failed(networkReason(error))
+            return UpdateCheck.Failed(networkReason(error))
         }
 
         val release = runCatching {
             json.decodeFromString(GitHubRelease.serializer(), payload)
         }.getOrElse {
             SafeLog.w(TAG, "Release JSON unreadable", it)
-            return@withContext UpdateCheck.Failed("release data could not be read")
+            return UpdateCheck.Failed("release data could not be read")
         }
 
         if (release.draft || release.preRelease) {
-            return@withContext UpdateCheck.Failed("newest release is a draft or pre-release")
+            return UpdateCheck.Failed("newest release is a draft or pre-release")
         }
 
         val latest = release.tag.removePrefix("v").trim()
         if (!isNewer(latest, currentVersion)) {
-            return@withContext UpdateCheck.UpToDate(currentVersion, latest)
+            return UpdateCheck.UpToDate(currentVersion, latest)
         }
 
         // update.json is optional: without it the download is still offered, just without a
@@ -74,7 +132,7 @@ class UpdateChecker(
         val apkAsset = manifest?.apk
             ?.let { wanted -> release.assets.firstOrNull { it.name == wanted } }
             ?: release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
-            ?: return@withContext UpdateCheck.Failed("release $latest has no APK to install")
+            ?: return UpdateCheck.Failed("release $latest has no APK to install")
 
         UpdateCheck.Available(
             AppRelease(
@@ -141,6 +199,13 @@ class UpdateChecker(
         const val TAG = "UpdateChecker"
         const val RELEASES_URL =
             "https://api.github.com/repos/Adnanh444/Tele-Cloud/releases/latest"
+        const val RELEASES_PAGE_URL = "https://github.com/Adnanh444/Tele-Cloud/releases/latest"
+
+        /** Plain asset link: no API, no rate limit, always the newest published release. */
+        const val DIRECT_MANIFEST_URL =
+            "https://github.com/Adnanh444/Tele-Cloud/releases/latest/download/update.json"
+        const val DIRECT_DOWNLOAD_BASE =
+            "https://github.com/Adnanh444/Tele-Cloud/releases/latest/download"
         const val USER_AGENT = "MemoraCloud"
         const val MANIFEST_NAME = "update.json"
         const val SHA256_HEX_LENGTH = 64

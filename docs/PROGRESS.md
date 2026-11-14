@@ -1,6 +1,6 @@
 # Progress — what is done, what is next
 
-Last updated after Part 4a (People). "Written" means the code is in the newest `MemoraCloud-source-*.zip` and reviewed
+Last updated after 1.0.9 (crash fix + restore). "Written" means the code is in the newest `MemoraCloud-source-*.zip` and reviewed
 statically (imports, resource keys, XML, brace balance) — it is **not** called "tested" until it has
 run on the phone, because there is no Android SDK in this workspace.
 
@@ -16,6 +16,7 @@ run on the phone, because there is no Android SDK in this workspace.
 | 3d | Graceful upload pause (finish current file, then stop) | ✅ written · optional, you skipped building it |
 | 4 | **Restore from Telegram** wizard: scope (everything / media / documents / audio), skip files already on device, live counts, queue the restore | ✅ written · ⏳ device test (`docs/PART4_RESTORE.md`) |
 | 4.1 | Choose an arbitrary device folder (SAF picker), duplicate-protection unit tests, restore status polish | ⏳ next |
+| 1.0.9 | **Crash fix:** stub workers for jobs queued by 1.0.6 (`PhotoLabelWorker`) and 1.0.7 (`FaceScanWorker`) — WorkManager re-creates unfinished jobs at start-up by class name and a deleted class crashed 1.0.8. Plus a crash handler that writes the stack trace to `files/crash/last.txt`, to `Downloads/MemoraCloud/memora-crash.txt`, and shows it in a dialog on the next start | ✅ written · ⏳ your install |
 | 5 | Final QA pass, honest feature list, mobile upload guide refresh | ⏳ not started |
 
 ## Graceful upload pause — DONE (Part 3d)

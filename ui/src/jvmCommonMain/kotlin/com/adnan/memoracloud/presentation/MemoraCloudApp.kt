@@ -35,6 +35,16 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import com.adnan.memoracloud.core.logging.CrashLogStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
@@ -122,6 +132,39 @@ fun MemoraCloudApp(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val crashLog = koinInject<CrashLogStore>()
+    var crashText by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        crashText = withContext(Dispatchers.IO) { crashLog.read() }
+    }
+    val shownCrash = crashText
+    if (shownCrash != null) {
+        AlertDialog(
+            onDismissRequest = {
+                crashLog.clear()
+                crashText = null
+            },
+            title = { Text("Last crash") },
+            text = {
+                SelectionContainer {
+                    Text(
+                        text = shownCrash,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState())
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    crashLog.clear()
+                    crashText = null
+                }) { Text("Close") }
+            }
+        )
     }
 
     val darkTheme = when (state.theme) {

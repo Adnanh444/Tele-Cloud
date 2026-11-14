@@ -12,5 +12,9 @@ internal data class ReleaseManifest(
     val versionCode: Int? = null,
     val apk: String? = null,
     val sha256: String? = null,
-    val minSdk: Int? = null
+    val minSdk: Int? = null,
+    /** Size of the APK in bytes, so the update dialog can show it without asking the API. */
+    val size: Long? = null,
+    /** Release notes, optional. */
+    val notes: String? = null
 )

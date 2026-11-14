@@ -6,6 +6,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.adnan.memoracloud.core.common.AppNotifications
 import com.adnan.memoracloud.core.common.SafeLog
+import com.adnan.memoracloud.core.compat.CrashHandler
 import com.adnan.memoracloud.core.logging.DebugLogController
 import com.adnan.memoracloud.core.proxy.ProxyFailover
 import com.adnan.memoracloud.core.publish.PublishScheduler
@@ -56,6 +57,12 @@ class MemoraCloudApplication : Application(), SingletonImageLoader.Factory {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(newBase)
+        // Before content providers start: WorkManager runs before onCreate and can be what crashes.
+        CrashHandler.install(newBase)
+    }
 
     override fun onCreate() {
         super.onCreate()

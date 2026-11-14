@@ -6,4 +6,5 @@ import org.koin.dsl.module
 val debugLogModule = module {
     singleOf(::DebugLogRecorder)
     singleOf(::DebugLogController)
+    singleOf(::CrashLogStore)
 }
