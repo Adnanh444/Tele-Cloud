@@ -33,7 +33,9 @@ class UpdateChecker(
             SafeLog.w(TAG, "Update check HTTP ${error.code}")
             return@withContext UpdateCheck.Failed(
                 if (error.code == HttpURLConnection.HTTP_NOT_FOUND) {
-                    "no published release found"
+                    // GitHub answers 404 both for "no releases" and for a private repository,
+                    // because the app never sends credentials.
+                    "no release found (nothing published, or the repository is private)"
                 } else {
                     "GitHub answered HTTP ${error.code}"
                 }

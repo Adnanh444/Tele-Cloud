@@ -89,6 +89,15 @@ android {
         buildConfig = true
     }
     packaging {
+        // ML Kit ships duplicate licence/metadata files; without this the merge fails on
+        // "More than one file was found with OS independent path".
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+        }
         jniLibs {
             // false (default): native libraries stored uncompressed, so the app starts faster.
             // -PlegacyJniPackaging compresses them instead, which makes the APK roughly 25-30%
@@ -142,6 +151,7 @@ dependencies {
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
+    implementation(libs.mlkit.image.labeling)
     implementation(libs.koin.compose.viewmodel)
     implementation(libs.koin.androidx.workmanager)
 

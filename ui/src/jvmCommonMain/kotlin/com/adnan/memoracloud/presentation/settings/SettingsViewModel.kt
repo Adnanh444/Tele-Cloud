@@ -11,6 +11,7 @@ import com.adnan.memoracloud.core.telegram.TelegramClient
 import com.adnan.memoracloud.core.telegram.TelegramUser
 import com.adnan.memoracloud.core.transfer.MaintenanceScheduler
 import com.adnan.memoracloud.core.transfer.TransferScheduler
+import com.adnan.memoracloud.core.ai.PhotoTagScheduler
 import com.adnan.memoracloud.core.update.UpdateCheck
 import com.adnan.memoracloud.core.update.UpdateChecker
 import com.adnan.memoracloud.data.repository.LocalDataWiper
@@ -41,6 +42,7 @@ import com.adnan.memoracloud.resources.rebuild_locked_files
 import com.adnan.memoracloud.resources.settings_debug_log_empty
 import com.adnan.memoracloud.resources.settings_free_up_none
 import com.adnan.memoracloud.resources.settings_nothing_to_remove
+import com.adnan.memoracloud.resources.settings_tag_photos_now_started
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -76,7 +78,8 @@ class SettingsViewModel(
     private val transferScheduler: TransferScheduler,
     val permissionChecker: PermissionChecker,
     private val updateChecker: UpdateChecker,
-    private val debugLogRecorder: DebugLogRecorder
+    private val debugLogRecorder: DebugLogRecorder,
+    private val photoTagScheduler: PhotoTagScheduler
 ) : ViewModel() {
 
     private val user = MutableStateFlow<TelegramUser?>(null)
@@ -347,6 +350,19 @@ class SettingsViewModel(
                 is UpdateCheck.Failed -> UpdateState.Message("Check failed: ${result.reason}")
             }
         }
+    }
+
+    /** Photo tagging: the switch drives both the setting and the background work. */
+    fun setPhotoIntelligence(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(aiLabelsEnabled = enabled) }
+            if (enabled) photoTagScheduler.enqueue() else photoTagScheduler.cancel()
+        }
+    }
+
+    fun tagPhotosNow() {
+        photoTagScheduler.enqueue()
+        _messages.tryEmit(UiText.Resource(Res.string.settings_tag_photos_now_started))
     }
 
     fun dismissUpdate() {

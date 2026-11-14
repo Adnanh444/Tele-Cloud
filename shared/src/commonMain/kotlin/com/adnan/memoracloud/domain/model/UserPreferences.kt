@@ -53,9 +53,13 @@ data class UserPreferences(
     val preferredAudioLanguage: String = "",
     val preferredSubtitleLanguage: String = "",
 
+    /** On-device photo tagging. Off means nothing is analysed, ever. */
+    val aiLabelsEnabled: Boolean = true,
     val backupNotifications: Boolean = true,
     val failureNotifications: Boolean = true,
 
+    /** True while the user has paused the transfer queue: new work lands here as PAUSED. */
+    val queuePaused: Boolean = false,
     val transferConcurrency: Int = 2,
     val transferRetryCount: Int = 3,
     val allowMeteredTransfers: Boolean = true,

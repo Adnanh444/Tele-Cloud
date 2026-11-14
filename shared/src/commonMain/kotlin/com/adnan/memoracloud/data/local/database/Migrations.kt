@@ -4,6 +4,21 @@ import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 
+/**
+ * On-device photo tags (Part 3b). One row per image, no foreign key: deleting a file row should not
+ * cascade here mid-migration, and the table is small enough that a manual cleanup is cheaper than
+ * the risk.
+ */
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `photo_labels` (`fileId` TEXT NOT NULL, `labels` TEXT NOT " +
+                    "NULL, `primaryLabel` TEXT NOT NULL, `confidence` REAL NOT NULL, " +
+                    "`updatedAt` INTEGER NOT NULL, PRIMARY KEY(`fileId`))"
+        )
+    }
+}
+
 val MIGRATION_16_17 = object : Migration(16, 17) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL("ALTER TABLE `files` ADD COLUMN `remoteBase` TEXT")

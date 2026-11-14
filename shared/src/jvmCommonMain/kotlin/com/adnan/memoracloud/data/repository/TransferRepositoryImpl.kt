@@ -272,15 +272,25 @@ class TransferRepositoryImpl(
             messageId = null,
             remoteFileId = null,
             sizeBytes = sizeBytes,
-            state = TransferState.QUEUED,
+            state = if (settingsRepository.preferences.first().queuePaused) {
+                TransferState.PAUSED
+            } else {
+                TransferState.QUEUED
+            },
             priority = priority,
             backupSessionId = sessionId,
             createdAt = now,
             updatedAt = now
         )
         transferDao.upsert(transfer)
-        kickWorker()
+        if (transfer.state == TransferState.QUEUED) kickWorker()
         return AppResult.Success(transfer.id)
+    }
+
+    private suspend fun clearQueuePause() {
+        if (settingsRepository.preferences.first().queuePaused) {
+            settingsRepository.update { it.copy(queuePaused = false) }
+        }
     }
 
     override suspend fun pause(id: String) {
@@ -294,6 +304,8 @@ class TransferRepositoryImpl(
     override suspend fun resume(id: String) {
         val transfer = transferDao.byId(id) ?: return
         if (transfer.state == TransferState.PAUSED || transfer.state == TransferState.FAILED) {
+            // The user asked for this file to run, so the queue pause no longer applies.
+            clearQueuePause()
             transferDao.setState(id, TransferState.QUEUED, System.currentTimeMillis())
             backupSessionTracker.refresh(transfer.backupSessionId)
             kickWorker()
@@ -319,24 +331,36 @@ class TransferRepositoryImpl(
             .forEach { cancel(it) }
     }
 
-    override suspend fun pauseAll() {
-        transferDao.pauseAll(System.currentTimeMillis())
+    /**
+     * Graceful by default: the queue stops, the file currently uploading is allowed to finish, so
+     * nothing is cut in half. [immediate] restores the old behaviour for emergencies (metered
+     * network), which aborts the running transfer at its next progress tick.
+     */
+    override suspend fun pauseAll(immediate: Boolean) {
+        val now = System.currentTimeMillis()
+        settingsRepository.update { it.copy(queuePaused = true) }
+        transferDao.pauseQueued(now)
+        if (immediate) transferDao.pauseAll(now)
         backupSessionTracker.refreshActive()
     }
 
     override suspend fun resumeAll() {
-        transferDao.resumeAll(System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        settingsRepository.update { it.copy(queuePaused = false) }
+        transferDao.resumeAll(now)
         backupSessionTracker.refreshActive()
         kickWorker()
     }
 
     override suspend fun cancelAll() {
+        clearQueuePause()
         transferDao.cancelAll(System.currentTimeMillis())
         syncFileStates()
         backupSessionTracker.refreshActive()
     }
 
     override suspend fun retry(id: String) {
+        clearQueuePause()
         val transfer = transferDao.byId(id) ?: return
         if (transfer.state == TransferState.FAILED || transfer.state == TransferState.CANCELLED) {
             transferDao.upsert(

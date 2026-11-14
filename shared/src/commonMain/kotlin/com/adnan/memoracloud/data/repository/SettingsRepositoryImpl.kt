@@ -97,6 +97,8 @@ class SettingsRepositoryImpl(
             autoLockTimeoutMinutes = this[PreferenceKeys.AUTO_LOCK_TIMEOUT_MINUTES]
                 ?: defaults.autoLockTimeoutMinutes,
             encryptFiles = this[PreferenceKeys.ENCRYPT_FILES] ?: defaults.encryptFiles,
+            queuePaused = this[PreferenceKeys.QUEUE_PAUSED] ?: defaults.queuePaused,
+            aiLabelsEnabled = this[PreferenceKeys.AI_LABELS_ENABLED] ?: defaults.aiLabelsEnabled,
             deleteAfterUpload = this[PreferenceKeys.DELETE_AFTER_UPLOAD]
                 ?: defaults.deleteAfterUpload,
             encryptThumbnails = this[PreferenceKeys.ENCRYPT_THUMBNAILS]
@@ -195,6 +197,8 @@ class SettingsRepositoryImpl(
         this[PreferenceKeys.AUTO_LOCK_TIMEOUT_MINUTES] = prefs.autoLockTimeoutMinutes
         this[PreferenceKeys.ENCRYPT_FILES] = prefs.encryptFiles
         this[PreferenceKeys.DELETE_AFTER_UPLOAD] = prefs.deleteAfterUpload
+        this[PreferenceKeys.QUEUE_PAUSED] = prefs.queuePaused
+        this[PreferenceKeys.AI_LABELS_ENABLED] = prefs.aiLabelsEnabled
         this[PreferenceKeys.ENCRYPT_THUMBNAILS] = prefs.encryptThumbnails
         this[PreferenceKeys.KEY_BACKUP_CREATED] = prefs.keyBackupCreated
         this[PreferenceKeys.FOLDER_OWNERSHIP_REPAIRED] = prefs.folderOwnershipRepaired

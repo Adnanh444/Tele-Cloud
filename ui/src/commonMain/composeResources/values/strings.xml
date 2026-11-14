@@ -564,6 +564,8 @@
     <string name="transfers_failed_transfers">Failed transfers</string>
     <string name="transfers_failed_uploads">Failed uploads</string>
     <string name="transfers_no_transfers">No transfers</string>
+    <string name="transfers_pause_now">Pause now (stops the current file)</string>
+    <string name="transfers_pause_after_current">Pause after this file</string>
     <string name="transfers_pause">Pause all</string>
     <string name="transfers_queued_running_paused_failed">Queued, running, paused and failed transfers are canceled. Files already uploaded stay in Telegram.</string>
     <string name="transfers_resume">Resume all</string>
@@ -786,6 +788,11 @@
     <string name="settings_choose_folder_device">Choose any folder on this device</string>
     <string name="settings_excluded_files_folders_skipped">Excluded files and folders are skipped by automatic backup.</string>
     <string name="settings_exclusion_remove_message">\"%1$s\" will be included in backups again.</string>
+    <string name="settings_photo_intelligence">Photo intelligence</string>
+    <string name="settings_photo_intelligence_summary">Tags photos on this device so search can find them by what is in them. Nothing is uploaded anywhere.</string>
+    <string name="settings_tag_photos_now">Tag photos now</string>
+    <string name="settings_tag_photos_now_summary">Runs in the background and is safe to leave</string>
+    <string name="settings_tag_photos_now_started">Tagging photos in the background</string>
     <string name="settings_exclusions">Exclusions</string>
     <string name="settings_files_folders_skipped_backup">Files and folders skipped by backup</string>
     <string name="settings_item_lives_app_cloud">That item lives in an app or cloud provider with no device path. Add a Pattern rule instead.</string>

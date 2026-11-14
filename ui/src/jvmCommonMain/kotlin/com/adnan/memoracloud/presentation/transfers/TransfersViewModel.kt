@@ -62,7 +62,11 @@ class TransfersViewModel(
 
     fun retry(id: String) = launch { transferRepository.retry(id) }
 
-    fun pauseAll() = launch { transferRepository.pauseAll() }
+    /** Finishes the file that is uploading, then stops. */
+    fun pauseAfterCurrent() = launch { transferRepository.pauseAll(immediate = false) }
+
+    /** Stops right away, aborting the running transfer — for metered data emergencies. */
+    fun pauseNow() = launch { transferRepository.pauseAll(immediate = true) }
 
     fun resumeAll() = launch { transferRepository.resumeAll() }
 

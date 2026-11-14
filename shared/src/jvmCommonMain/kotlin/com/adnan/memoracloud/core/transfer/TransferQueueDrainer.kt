@@ -54,6 +54,9 @@ class TransferQueueDrainer(
                             return@launch
                         }
                         val prefs = settingsRepository.preferences.first()
+                        // Checked before claiming the next item, never mid-transfer: the file that
+                        // is already uploading runs to completion.
+                        if (prefs.queuePaused) return@launch
                         if (slot >= concurrencyOf(prefs)) {
                             if (!awaitSlot(slot)) return@launch
                             continue

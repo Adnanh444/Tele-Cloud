@@ -154,6 +154,13 @@ interface TransferDao {
     )
     suspend fun pauseAll(now: Long): Int
 
+    /** Graceful pause: stops the queue, leaves the file that is uploading right now alone. */
+    @Query(
+        """UPDATE transfers SET state = 'PAUSED', updatedAt = :now
+           WHERE state = 'QUEUED'"""
+    )
+    suspend fun pauseQueued(now: Long): Int
+
     @Query(
         """UPDATE transfers SET state = 'QUEUED', updatedAt = :now
            WHERE state = 'PAUSED'"""

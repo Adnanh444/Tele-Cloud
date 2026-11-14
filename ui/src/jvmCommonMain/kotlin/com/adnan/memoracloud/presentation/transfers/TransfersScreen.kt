@@ -94,7 +94,8 @@ import com.adnan.memoracloud.resources.transfers_failed_transfers
 import com.adnan.memoracloud.resources.transfers_failed_uploads
 import com.adnan.memoracloud.resources.transfers_more_queued
 import com.adnan.memoracloud.resources.transfers_no_transfers
-import com.adnan.memoracloud.resources.transfers_pause
+import com.adnan.memoracloud.resources.transfers_pause_after_current
+import com.adnan.memoracloud.resources.transfers_pause_now
 import com.adnan.memoracloud.resources.transfers_queued_running_paused_failed
 import com.adnan.memoracloud.resources.transfers_resume
 import com.adnan.memoracloud.resources.transfers_section_active
@@ -161,10 +162,13 @@ fun TransfersScreen(
                 },
                 actions = {
                     if (state.active.isNotEmpty()) {
-                        IconButton(onClick = viewModel::pauseAll) {
+                        // Tapping Pause finishes the file in flight, so no upload is cut in half.
+                        IconButton(onClick = viewModel::pauseAfterCurrent) {
                             Icon(
                                 Icons.Filled.Pause,
-                                contentDescription = stringResource(Res.string.transfers_pause)
+                                contentDescription = stringResource(
+                                    Res.string.transfers_pause_after_current
+                                )
                             )
                         }
                     } else if (state.paused.isNotEmpty()) {
@@ -185,6 +189,14 @@ fun TransfersScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.transfers_pause_now)) },
+                            enabled = state.active.isNotEmpty(),
+                            onClick = {
+                                showMenu = false
+                                viewModel.pauseNow()
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(Res.string.transfers_cancel)) },
                             enabled = state.active.isNotEmpty() ||

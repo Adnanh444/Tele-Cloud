@@ -113,6 +113,10 @@ import com.adnan.memoracloud.resources.settings_encrypt_thumbnails
 import com.adnan.memoracloud.resources.settings_encrypt_uploads
 import com.adnan.memoracloud.resources.settings_encryption_stays_off
 import com.adnan.memoracloud.resources.settings_exclusions
+import com.adnan.memoracloud.resources.settings_photo_intelligence
+import com.adnan.memoracloud.resources.settings_photo_intelligence_summary
+import com.adnan.memoracloud.resources.settings_tag_photos_now
+import com.adnan.memoracloud.resources.settings_tag_photos_now_summary
 import com.adnan.memoracloud.resources.settings_failures
 import com.adnan.memoracloud.resources.settings_files_folders_skipped_backup
 import com.adnan.memoracloud.resources.settings_files_sealed_leaving_device
@@ -588,6 +592,21 @@ private fun BackupSection(
                 title = stringResource(Res.string.settings_exclusions),
                 subtitle = stringResource(Res.string.settings_files_folders_skipped_backup),
                 onClick = onOpenExclusions
+            )
+        }
+        add {
+            SettingsSwitchRow(
+                title = stringResource(Res.string.settings_photo_intelligence),
+                subtitle = stringResource(Res.string.settings_photo_intelligence_summary),
+                checked = prefs.aiLabelsEnabled,
+                onChange = { value -> viewModel.setPhotoIntelligence(value) }
+            )
+        }
+        add(visible = prefs.aiLabelsEnabled) {
+            SettingsClickRow(
+                title = stringResource(Res.string.settings_tag_photos_now),
+                subtitle = stringResource(Res.string.settings_tag_photos_now_summary),
+                onClick = viewModel::tagPhotosNow
             )
         }
     }

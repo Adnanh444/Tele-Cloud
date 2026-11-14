@@ -12,6 +12,7 @@ import com.adnan.memoracloud.data.local.dao.ProxyDao
 import com.adnan.memoracloud.data.local.dao.FolderDao
 import com.adnan.memoracloud.data.local.dao.FolderTombstoneDao
 import com.adnan.memoracloud.data.local.dao.PendingDeleteDao
+import com.adnan.memoracloud.data.local.dao.PhotoLabelDao
 import com.adnan.memoracloud.data.local.dao.StorageChannelDao
 import com.adnan.memoracloud.data.local.dao.ThumbnailDao
 import com.adnan.memoracloud.data.local.dao.TransferDao
@@ -25,6 +26,7 @@ import com.adnan.memoracloud.data.local.entity.ProxyEntity
 import com.adnan.memoracloud.data.local.entity.FolderEntity
 import com.adnan.memoracloud.data.local.entity.FolderTombstoneEntity
 import com.adnan.memoracloud.data.local.entity.PendingDeleteEntity
+import com.adnan.memoracloud.data.local.entity.PhotoLabelEntity
 import com.adnan.memoracloud.data.local.entity.StorageChannelEntity
 import com.adnan.memoracloud.data.local.entity.ThumbnailEntity
 import com.adnan.memoracloud.data.local.entity.TransferEntity
@@ -43,9 +45,10 @@ import com.adnan.memoracloud.data.local.entity.TransferEntity
         PendingDeleteEntity::class,
         FilePartEntity::class,
         ProxyEntity::class,
-        FolderTombstoneEntity::class
+        FolderTombstoneEntity::class,
+        PhotoLabelEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 @ConstructedBy(MemoraCloudDatabaseConstructor::class)
@@ -62,6 +65,7 @@ abstract class MemoraCloudDatabase : RoomDatabase() {
     abstract fun filePartDao(): FilePartDao
     abstract fun proxyDao(): ProxyDao
     abstract fun folderTombstoneDao(): FolderTombstoneDao
+    abstract fun photoLabelDao(): PhotoLabelDao
 
     companion object {
         const val NAME = "memoracloud.db"

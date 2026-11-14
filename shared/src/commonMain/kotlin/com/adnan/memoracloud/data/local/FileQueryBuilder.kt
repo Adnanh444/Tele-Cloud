@@ -56,7 +56,13 @@ object FileQueryBuilder {
             args.addAll(spec.categories.map { it.name })
         }
         spec.nameQuery?.takeIf { it.isNotBlank() }?.let {
-            where.append(" AND name LIKE ? ESCAPE '\\'")
+            // The same box searches names and on-device photo tags, so typing "food" or "dog"
+            // finds pictures whose file name says nothing about them.
+            where.append(
+                " AND (name LIKE ? ESCAPE '\\'" +
+                        " OR id IN (SELECT fileId FROM photo_labels WHERE labels LIKE ? ESCAPE '\\'))"
+            )
+            args.add("%${escapeLike(it)}%")
             args.add("%${escapeLike(it)}%")
         }
         spec.extension?.takeIf { it.isNotBlank() }?.let {

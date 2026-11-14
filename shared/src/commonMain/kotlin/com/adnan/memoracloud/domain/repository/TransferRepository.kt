@@ -40,7 +40,7 @@ interface TransferRepository {
 
     suspend fun retry(id: String)
 
-    suspend fun pauseAll()
+    suspend fun pauseAll(immediate: Boolean = false)
 
     suspend fun resumeAll()
 
