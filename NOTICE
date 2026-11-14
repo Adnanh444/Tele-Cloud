@@ -1,0 +1,28 @@
+Memora Cloud
+Copyright (C) 2026 Adnan
+
+This product is a modified fork of TeleDrive.
+
+  TeleDrive
+  Copyright (C) Mahmud0808 and contributors
+  https://github.com/Mahmud0808/TeleDrive
+  Licensed under the Apache License, Version 2.0
+
+Modifications for Memora Cloud include, but are not limited to: application identity and package
+rename, new launcher and notification artwork, Android-only build and release automation, and
+(subject to future parts) an in-app updater and on-device photo intelligence.
+
+Both the original work and these modifications are licensed under the Apache License, Version 2.0.
+A copy of that license is included in the LICENSE file. You may obtain a copy at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License
+is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing permissions and limitations under the
+License.
+
+Third-party components keep their own licenses, including but not limited to: TDLib and TDLight
+(Telegram), AndroidX / Jetpack Compose / Room / WorkManager / Media3 / Paging (Apache 2.0),
+Koin (Apache 2.0), kotlinx (Apache 2.0), Coil (Apache 2.0), Zip4j (Apache 2.0),
+ZXing (Apache 2.0), Telephoto (Apache 2.0).

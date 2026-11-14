@@ -1,0 +1,8 @@
+package com.adnan.memoracloud.presentation.components
+
+internal object KeyboardHandoff {
+
+    var armed = false
+
+    fun take(): Boolean = armed.also { armed = false }
+}

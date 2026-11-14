@@ -1,0 +1,86 @@
+package com.adnan.memoracloud.data.repository
+
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.adnan.memoracloud.core.crypto.StreamCrypto
+import com.adnan.memoracloud.core.crypto.WrappedKeyRepository
+import com.adnan.memoracloud.data.local.database.MemoraCloudDatabase
+import com.adnan.memoracloud.data.remote.telegram.ManifestCodec
+import com.adnan.memoracloud.data.remote.telegram.RemoteFileManifest
+import com.adnan.memoracloud.domain.model.UserPreferences
+import com.adnan.memoracloud.testing.unused
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+
+internal class SyncHarness : AutoCloseable {
+    private val dbFile = File.createTempFile("teledrive-sync", ".db")
+    val database: MemoraCloudDatabase = Room.databaseBuilder<MemoraCloudDatabase>(name = dbFile.absolutePath)
+        .setDriver(BundledSQLiteDriver())
+        .setQueryCoroutineContext(Dispatchers.IO)
+        .build()
+
+    val settings = FakeSettings(UserPreferences(storageChatId = TEST_CHAT))
+    val telegram = FakeTelegram()
+    val scheduler = CountingScheduler()
+    val codec = ManifestCodec(
+        StreamCrypto(),
+        object : WrappedKeyRepository by unused() {
+            override fun exists(name: String): Boolean = false
+        }
+    )
+    val activeChannel = ActiveChannel(settings)
+    val folderPaths = FolderPathResolver(
+        database.folderDao(),
+        activeChannel,
+        database.folderTombstoneDao()
+    )
+    val storagePaths = FakeStoragePaths()
+    val folderMerger = FolderMerger(
+        database.folderDao(),
+        database.fileDao(),
+        database.folderTombstoneDao(),
+        database
+    )
+    val folderState = FolderStateSynchronizer(
+        storagePaths,
+        telegram,
+        database.folderDao(),
+        database.folderTombstoneDao(),
+        settings,
+        StreamCrypto(),
+        unused<WrappedKeyRepository>(),
+        folderMerger
+    )
+    val indexSnapshot = IndexSnapshot(storagePaths, telegram, folderState)
+
+    fun newSync() = SyncRepositoryImpl(
+        telegramClient = telegram,
+        fileDao = database.fileDao(),
+        manifestCodec = codec,
+        pendingDeleteDao = database.pendingDeleteDao(),
+        filePartDao = database.filePartDao(),
+        folderDao = database.folderDao(),
+        folderPathResolver = folderPaths,
+        activeChannel = activeChannel,
+        channelOwnership = ChannelOwnership(
+            database.fileDao(),
+            database.folderDao(),
+            database.exclusionDao()
+        ),
+        folderStateSynchronizer = folderState,
+        folderMerger = folderMerger,
+        indexSnapshot = indexSnapshot,
+        publishScheduler = scheduler,
+        settingsRepository = settings,
+        database = database
+    )
+
+    fun caption(manifest: RemoteFileManifest) = codec.encode(manifest, encrypt = false)
+
+    override fun close() {
+        database.close()
+        dbFile.delete()
+        telegram.cleanUp()
+        storagePaths.cacheDir.deleteRecursively()
+    }
+}
