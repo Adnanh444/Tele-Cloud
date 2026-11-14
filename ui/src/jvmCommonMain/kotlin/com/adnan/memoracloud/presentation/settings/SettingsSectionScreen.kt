@@ -26,7 +26,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -115,16 +114,6 @@ import com.adnan.memoracloud.resources.settings_encrypt_thumbnails
 import com.adnan.memoracloud.resources.settings_encrypt_uploads
 import com.adnan.memoracloud.resources.settings_encryption_stays_off
 import com.adnan.memoracloud.resources.settings_exclusions
-import com.adnan.memoracloud.resources.settings_people
-import com.adnan.memoracloud.resources.settings_people_summary
-import com.adnan.memoracloud.resources.settings_scan_photos_now
-import com.adnan.memoracloud.resources.settings_scan_photos_summary
-import com.adnan.memoracloud.resources.settings_forget_faces
-import com.adnan.memoracloud.resources.settings_forget_faces_summary
-import com.adnan.memoracloud.resources.settings_forget_faces_confirm
-import com.adnan.memoracloud.resources.settings_people_status
-import com.adnan.memoracloud.resources.settings_people_waiting
-import com.adnan.memoracloud.resources.settings_people_none_yet
 import com.adnan.memoracloud.resources.settings_failures
 import com.adnan.memoracloud.resources.settings_files_folders_skipped_backup
 import com.adnan.memoracloud.resources.settings_files_sealed_leaving_device
@@ -162,7 +151,10 @@ import com.adnan.memoracloud.resources.settings_removes_session_stored_api
 import com.adnan.memoracloud.resources.settings_require_fingerprint_screen_lock
 import com.adnan.memoracloud.resources.settings_required_before_encrypt
 import com.adnan.memoracloud.resources.settings_restore_encryption_key
+import com.adnan.memoracloud.resources.settings_restore_from_telegram
+import com.adnan.memoracloud.resources.settings_restore_from_telegram_summary
 import com.adnan.memoracloud.resources.settings_restores_file_list
+import com.adnan.memoracloud.domain.usecase.RestoreScope
 import com.adnan.memoracloud.resources.settings_retry_attempts
 import com.adnan.memoracloud.resources.settings_set
 import com.adnan.memoracloud.resources.settings_set_passphrase
@@ -240,6 +232,7 @@ fun SettingsSectionScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmLogout by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
     var confirmClearCache by remember { mutableStateOf(false) }
 
     val deleteConsentLauncher = LocalDeleteConsentLauncher.current
@@ -329,6 +322,19 @@ fun SettingsSectionScreen(
         }
     }
 
+    if (showRestoreDialog) {
+        val plan by viewModel.restorePlan.collectAsStateWithLifecycle()
+        RestoreDialog(
+            plan = plan,
+            onScopeChange = viewModel::loadRestorePlan,
+            onConfirm = { scope, onlyMissing ->
+                showRestoreDialog = false
+                viewModel.startRestore(scope, onlyMissing)
+            },
+            onDismiss = { showRestoreDialog = false }
+        )
+    }
+
     if (confirmLogout) {
         ConfirmDialog(
             title = stringResource(Res.string.settings_log_telegram),
@@ -409,6 +415,16 @@ private fun AccountSection(
         }
         add {
             SettingsClickRow(
+                title = stringResource(Res.string.settings_restore_from_telegram),
+                subtitle = stringResource(Res.string.settings_restore_from_telegram_summary),
+                onClick = {
+                    showRestoreDialog = true
+                    viewModel.loadRestorePlan(RestoreScope.EVERYTHING)
+                }
+            )
+        }
+        add {
+            SettingsClickRow(
                 title = stringResource(Res.string.common_storage_channels),
                 subtitle = stringResource(Res.string.settings_switch_drives_create_another),
                 onClick = onPickChannel
@@ -445,11 +461,8 @@ private fun BackupSection(
         }
     }
     var showIntervalDialog by remember { mutableStateOf(false) }
-    val peopleHealth by viewModel.peopleHealth.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.refreshPeopleHealth() }
     var showSizeLimitDialog by remember { mutableStateOf(false) }
     var showTypeDialog by remember { mutableStateOf(false) }
-    var confirmForgetFaces by remember { mutableStateOf(false) }
 
     val categoryLabels = listOf(
         FileCategory.IMAGE to Res.string.common_category_photos,
@@ -491,27 +504,6 @@ private fun BackupSection(
                 }
             },
             onDismiss = { showTypeDialog = false }
-        )
-    }
-
-    if (confirmForgetFaces) {
-        AlertDialog(
-            onDismissRequest = { confirmForgetFaces = false },
-            title = { Text(stringResource(Res.string.settings_forget_faces)) },
-            text = { Text(stringResource(Res.string.settings_forget_faces_confirm)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmForgetFaces = false
-                        viewModel.forgetFaces()
-                    }
-                ) { Text(stringResource(Res.string.settings_remove)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmForgetFaces = false }) {
-                    Text(stringResource(Res.string.common_cancel))
-                }
-            }
         )
     }
 
@@ -624,40 +616,6 @@ private fun BackupSection(
                 title = stringResource(Res.string.settings_exclusions),
                 subtitle = stringResource(Res.string.settings_files_folders_skipped_backup),
                 onClick = onOpenExclusions
-            )
-        }
-        add {
-            SettingsSwitchRow(
-                title = stringResource(Res.string.settings_people),
-                subtitle = stringResource(Res.string.settings_people_summary),
-                checked = prefs.faceGroupingEnabled,
-                onChange = { value -> viewModel.setPeopleEnabled(value) }
-            )
-        }
-        add(visible = prefs.faceGroupingEnabled) {
-            SettingsClickRow(
-                title = stringResource(Res.string.settings_scan_photos_now),
-                subtitle = when {
-                    peopleHealth.people > 0 -> stringResource(
-                        Res.string.settings_people_status,
-                        peopleHealth.people,
-                        peopleHealth.faces,
-                        peopleHealth.scannedPhotos
-                    )
-
-                    peopleHealth.waitingPhotos > 0 ->
-                        stringResource(Res.string.settings_people_waiting, peopleHealth.waitingPhotos)
-
-                    else -> stringResource(Res.string.settings_people_none_yet)
-                },
-                onClick = viewModel::scanPhotosNow
-            )
-        }
-        add(visible = prefs.faceGroupingEnabled && peopleHealth.people > 0) {
-            SettingsClickRow(
-                title = stringResource(Res.string.settings_forget_faces),
-                subtitle = stringResource(Res.string.settings_forget_faces_summary),
-                onClick = { confirmForgetFaces = true }
             )
         }
     }

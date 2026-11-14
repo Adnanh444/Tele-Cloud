@@ -10,29 +10,15 @@ import androidx.sqlite.execSQL
  * the risk.
  */
 /**
- * 1.0.6 briefly shipped on-device photo tags. The feature was replaced by face grouping, so the
- * table it wrote to is dropped here and the three People tables are created in the same step.
+ * The on-device AI experiments (photo tags in 1.0.6, face groups in the unpublished 1.0.7) are gone,
+ * so their tables are dropped: an upgraded install carries no dead data.
  */
 val MIGRATION_18_19 = object : Migration(18, 19) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL("DROP TABLE IF EXISTS `photo_labels`")
-        connection.execSQL(
-            "CREATE TABLE IF NOT EXISTS `people` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                    "`name` TEXT NOT NULL, `coverPath` TEXT, `createdAt` INTEGER NOT NULL)"
-        )
-        connection.execSQL(
-            "CREATE TABLE IF NOT EXISTS `faces` (`id` TEXT NOT NULL, `fileId` TEXT NOT NULL, " +
-                    "`personId` INTEGER, `embedding` BLOB NOT NULL, `cropPath` TEXT NOT NULL, " +
-                    "`score` REAL NOT NULL, `addedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))"
-        )
-        connection.execSQL("CREATE INDEX IF NOT EXISTS `index_faces_fileId` ON `faces` (`fileId`)")
-        connection.execSQL(
-            "CREATE INDEX IF NOT EXISTS `index_faces_personId` ON `faces` (`personId`)"
-        )
-        connection.execSQL(
-            "CREATE TABLE IF NOT EXISTS `face_scans` (`fileId` TEXT NOT NULL, " +
-                    "`faceCount` INTEGER NOT NULL, `scannedAt` INTEGER NOT NULL, PRIMARY KEY(`fileId`))"
-        )
+        connection.execSQL("DROP TABLE IF EXISTS `faces`")
+        connection.execSQL("DROP TABLE IF EXISTS `people`")
+        connection.execSQL("DROP TABLE IF EXISTS `face_scans`")
     }
 }
 

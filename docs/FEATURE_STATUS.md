@@ -4,7 +4,7 @@ Honest state of every requirement in the brief, mapped to the code that implemen
 Legend: **✅ inherited & working** (upstream code, rebranded, kept) · **🆕 added in this fork** ·
 **🚧 planned, not yet written** · **❌ not possible / not provided**
 
-Last updated: Part 4 (People / face grouping).
+Last updated: Part 4 (restore wizard; AI removed).
 
 ---
 
@@ -143,10 +143,11 @@ mobile upload helper, version override, no desktop jobs.
   restore/backup status polish.
 * **Part 3 — folder auto-detection: done**; **per-type switches + delete consent: done**
   (`docs/PART3_CHANGES.md`).
-* **Part 4 — People, done in 1.0.7:** on-device face detection, 192-float signatures, grouping,
-  a People strip in the Gallery with a per-person filter, and a Settings switch with live counts
-  (`docs/PART4_PEOPLE.md`). The 1.0.6 photo tagging was removed at the user's request. Renaming and
-  merging groups are the next slice.
+* **On-device AI: removed.** Photo tags (1.0.6) and face grouping (unpublished 1.0.7) were both
+  dropped at the user's request — the app is meant to stay light and simple. ML Kit, TensorFlow Lite
+  and the 5 MB model are out of the APK, and the tables are dropped by the v18→v19 migration.
+* **Part 4 — Restore from Telegram:** one place to bring the backup back, with scope, live counts
+  and "skip files already on this device" (`docs/PART4_RESTORE.md`).
 * **Desktop apps:** the module is still in the tree but no longer built or supported here.
 * **Localisation of new strings** beyond English.
 * **Silent self-update:** not possible without system privileges; Android will always show the

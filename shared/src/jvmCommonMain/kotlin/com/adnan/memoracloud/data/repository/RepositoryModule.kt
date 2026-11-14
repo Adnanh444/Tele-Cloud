@@ -7,7 +7,6 @@ import com.adnan.memoracloud.domain.repository.CacheRepository
 import com.adnan.memoracloud.domain.repository.ChannelRepository
 import com.adnan.memoracloud.domain.repository.ExclusionRepository
 import com.adnan.memoracloud.domain.repository.FileRepository
-import com.adnan.memoracloud.domain.repository.PeopleRepository
 import com.adnan.memoracloud.domain.repository.KeyBackupRepository
 import com.adnan.memoracloud.domain.repository.ProxyRepository
 import com.adnan.memoracloud.domain.repository.SettingsRepository
@@ -29,7 +28,6 @@ val repositoryModule = module {
     singleOf(::FolderMerger)
     singleOf(::IndexSnapshot)
     singleOf(::FolderStateSynchronizer)
-    singleOf(::PeopleRepositoryImpl) bind PeopleRepository::class
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::FileRepositoryImpl) bind FileRepository::class
     singleOf(::TrashRepositoryImpl) bind TrashRepository::class

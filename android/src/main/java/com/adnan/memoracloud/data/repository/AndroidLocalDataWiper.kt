@@ -32,10 +32,7 @@ class AndroidLocalDataWiper(
     private companion object {
         const val TAG = "LocalDataWiper"
 
-        /**
-         * Import staging, generated previews and the face crops used as People avatars. The key
-         * store is left alone, and Telegram keeps the photos themselves.
-         */
-        val APP_DIRECTORIES = listOf("imports", "previews", "faces")
+        /** Import staging and generated previews; the key store is left alone. */
+        val APP_DIRECTORIES = listOf("imports", "previews")
     }
 }

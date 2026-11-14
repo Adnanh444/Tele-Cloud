@@ -7,6 +7,7 @@ val useCaseModule = module {
     factoryOf(::DecideBackupActionUseCase)
     factoryOf(::EvaluateExclusionsUseCase)
     factoryOf(::MakeAvailableOfflineUseCase)
+    factoryOf(::RestoreFilesUseCase)
     factoryOf(::TrashExpiryCalculator)
     factoryOf(::ValidateUploadUseCase)
 }

@@ -25,9 +25,7 @@ import com.adnan.memoracloud.domain.model.FileSortField
 import com.adnan.memoracloud.domain.model.MediaAlbum
 import com.adnan.memoracloud.domain.model.SortDirection
 import com.adnan.memoracloud.domain.model.ViewMode
-import com.adnan.memoracloud.domain.model.Person
 import com.adnan.memoracloud.domain.repository.FileRepository
-import com.adnan.memoracloud.domain.repository.PeopleRepository
 import com.adnan.memoracloud.domain.repository.SettingsRepository
 import com.adnan.memoracloud.domain.repository.SyncRepository
 import com.adnan.memoracloud.domain.repository.TransferRepository
@@ -73,7 +71,6 @@ class GalleryViewModel(
     private val settingsRepository: SettingsRepository,
     private val syncRepository: SyncRepository,
     private val makeAvailableOffline: MakeAvailableOfflineUseCase,
-    private val peopleRepository: PeopleRepository,
     private val clipboard: FileClipboard
 ) : ViewModel() {
 
@@ -97,18 +94,6 @@ class GalleryViewModel(
 
     private val tab = MutableStateFlow(GalleryTab.ALL)
 
-    /** Set when the user taps a face in the People strip; filters the grid to that person. */
-    private val personFilter = MutableStateFlow<Long?>(null)
-
-    private val people: Flow<List<Person>> = peopleRepository.observePeople()
-
-    fun selectPerson(personId: Long) {
-        personFilter.value = if (personFilter.value == personId) null else personId
-    }
-
-    fun clearPersonFilter() {
-        personFilter.value = null
-    }
     private val sort = settingsRepository.preferences
         .map { it.gallerySortField to it.gallerySortDirection }
         .distinctUntilChanged()
@@ -123,9 +108,8 @@ class GalleryViewModel(
     private val spec: Flow<FileQuerySpec> = combine(
         tab,
         sort,
-        settingsRepository.preferences,
-        personFilter
-    ) { currentTab, (field, direction), _, person ->
+        settingsRepository.preferences
+    ) { currentTab, (field, direction), _ ->
         FileQuerySpec(
             folderId = albumFolderId,
             filterByFolder = isAlbumView,
@@ -136,7 +120,6 @@ class GalleryViewModel(
             },
             showHidden = false,
             showArchived = false,
-            personId = person,
             sortField = field,
             sortDirection = direction
         )
@@ -186,16 +169,9 @@ class GalleryViewModel(
             .distinctUntilChanged(),
         combine(
             albums,
-            settingsRepository.preferences.map { it.galleryViewMode }.distinctUntilChanged(),
-            combine(people, personFilter) { list, id -> list to id }
-        ) { albumList, mode, peopleState ->
-            val (list, id) = peopleState
-            GalleryExtras(
-                albums = albumList,
-                viewMode = mode,
-                people = list,
-                selectedPerson = list.firstOrNull { it.id == id }
-            )
+            settingsRepository.preferences.map { it.galleryViewMode }.distinctUntilChanged()
+        ) { albumList, mode ->
+            GalleryExtras(albums = albumList, viewMode = mode)
         }
     ) { currentTab, (field, direction), selectionState, sizes, extras ->
         val (selected, capabilities) = selectionState
@@ -203,8 +179,6 @@ class GalleryViewModel(
         GalleryUiState(
             tab = currentTab,
             albums = extras.albums,
-            people = extras.people,
-            selectedPerson = extras.selectedPerson,
             albumTitle = route?.title,
             viewMode = extras.viewMode,
             isAlbumView = isAlbumView,
@@ -436,10 +410,8 @@ class GalleryViewModel(
     }
 }
 
-/** Everything the grid needs from preferences and the People strip. */
+/** Everything the grid needs from preferences. */
 private data class GalleryExtras(
     val albums: List<MediaAlbum>,
-    val viewMode: ViewMode,
-    val people: List<Person>,
-    val selectedPerson: Person?
+    val viewMode: ViewMode
 )

@@ -11,7 +11,6 @@ import com.adnan.memoracloud.core.telegram.TelegramClient
 import com.adnan.memoracloud.core.telegram.TelegramUser
 import com.adnan.memoracloud.core.transfer.MaintenanceScheduler
 import com.adnan.memoracloud.core.transfer.TransferScheduler
-import com.adnan.memoracloud.core.people.FaceScanScheduler
 import com.adnan.memoracloud.core.update.UpdateCheck
 import com.adnan.memoracloud.core.update.UpdateChecker
 import com.adnan.memoracloud.data.repository.LocalDataWiper
@@ -23,6 +22,11 @@ import com.adnan.memoracloud.domain.repository.ChannelRepository
 import com.adnan.memoracloud.domain.repository.FileRepository
 import com.adnan.memoracloud.domain.repository.KeyBackupRepository
 import com.adnan.memoracloud.domain.repository.SettingsRepository
+import com.adnan.memoracloud.domain.usecase.RestoreFilesUseCase
+import com.adnan.memoracloud.domain.usecase.RestorePlan
+import com.adnan.memoracloud.domain.usecase.RestoreScope
+import com.adnan.memoracloud.resources.restore_nothing_to_do
+import com.adnan.memoracloud.resources.restore_queued
 import com.adnan.memoracloud.domain.repository.SyncRepository
 import com.adnan.memoracloud.domain.repository.TelegramAuthRepository
 import com.adnan.memoracloud.presentation.common.UiText
@@ -42,10 +46,6 @@ import com.adnan.memoracloud.resources.rebuild_locked_files
 import com.adnan.memoracloud.resources.settings_debug_log_empty
 import com.adnan.memoracloud.resources.settings_free_up_none
 import com.adnan.memoracloud.resources.settings_nothing_to_remove
-import com.adnan.memoracloud.resources.settings_faces_forgotten
-import com.adnan.memoracloud.resources.settings_scan_photos_started
-import com.adnan.memoracloud.domain.repository.PeopleRepository
-import com.adnan.memoracloud.domain.people.PeopleHealth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -81,9 +81,8 @@ class SettingsViewModel(
     private val transferScheduler: TransferScheduler,
     val permissionChecker: PermissionChecker,
     private val updateChecker: UpdateChecker,
+    private val restoreFiles: RestoreFilesUseCase,
     private val debugLogRecorder: DebugLogRecorder,
-    private val faceScanScheduler: FaceScanScheduler,
-    private val peopleRepository: PeopleRepository
 ) : ViewModel() {
 
     private val user = MutableStateFlow<TelegramUser?>(null)
@@ -97,8 +96,9 @@ class SettingsViewModel(
     private val _shareRequests = MutableSharedFlow<ShareRequest>(extraBufferCapacity = 1)
     val shareRequests = _shareRequests.asSharedFlow()
 
-    private val _peopleHealth = MutableStateFlow(PeopleHealth(0, 0, 0, 0))
-    val peopleHealth: StateFlow<PeopleHealth> = _peopleHealth.asStateFlow()
+    private val _restorePlan = MutableStateFlow<RestorePlan?>(null)
+    /** Null while the counts are being read from the index. */
+    val restorePlan: StateFlow<RestorePlan?> = _restorePlan.asStateFlow()
 
     private val _keyBackupWorking = MutableStateFlow(false)
     val keyBackupWorking: StateFlow<Boolean> = _keyBackupWorking.asStateFlow()
@@ -359,35 +359,30 @@ class SettingsViewModel(
         }
     }
 
-    /** People: the switch drives both the setting and the background work. */
-    fun setPeopleEnabled(enabled: Boolean) {
+    /** Reads how much a restore would involve. Nothing is downloaded to answer this. */
+    fun loadRestorePlan(scope: RestoreScope) {
         viewModelScope.launch {
-            settingsRepository.update { it.copy(faceGroupingEnabled = enabled) }
-            if (enabled) faceScanScheduler.enqueue() else faceScanScheduler.cancel()
-            loadPeopleHealth()
+            _restorePlan.value = null
+            _restorePlan.value = withContext(Dispatchers.IO) { restoreFiles.plan(scope) }
         }
     }
 
-    fun scanPhotosNow() {
-        faceScanScheduler.enqueue()
-        _messages.tryEmit(UiText.Resource(Res.string.settings_scan_photos_started))
-    }
-
-    /** Deletes every face signature and group on this device. Photos are not touched. */
-    fun forgetFaces() {
+    fun startRestore(scope: RestoreScope, onlyMissing: Boolean) {
         viewModelScope.launch {
-            peopleRepository.forgetAll()
-            loadPeopleHealth()
-            _messages.tryEmit(UiText.Resource(Res.string.settings_faces_forgotten))
+            val result = withContext(Dispatchers.IO) { restoreFiles.restore(scope, onlyMissing) }
+            when (result) {
+                is AppResult.Success -> _messages.tryEmit(
+                    if (result.value == 0) {
+                        UiText.Resource(Res.string.restore_nothing_to_do)
+                    } else {
+                        UiText.Resource(Res.string.restore_queued, result.value)
+                    }
+                )
+
+                is AppResult.Failure -> _messages.tryEmit(result.error.toUiText())
+            }
+            _restorePlan.value = withContext(Dispatchers.IO) { restoreFiles.plan(scope) }
         }
-    }
-
-    fun refreshPeopleHealth() {
-        viewModelScope.launch { loadPeopleHealth() }
-    }
-
-    private suspend fun loadPeopleHealth() {
-        _peopleHealth.value = withContext(Dispatchers.IO) { peopleRepository.health() }
     }
 
     fun dismissUpdate() {

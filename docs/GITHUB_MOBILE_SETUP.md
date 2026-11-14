@@ -78,3 +78,14 @@ inside Memora Cloud.
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | An APK with a different signing key is installed. Uninstall the old one once (data is re-downloadable from Telegram: sign in, pick the channel, the index rebuilds). |
 | Update check says "up to date" but a release exists | The release is a draft, a pre-release, or the tag has no `v` prefix. Publish it as a normal release. |
 | Release APK won't install ("App not installed") | Play Protect can block sideloaded APKs; choose *Install anyway*, or temporarily disable scanning for that install. |
+
+
+## The Sync workflow must delete, not only overwrite
+
+A Sync built on `tar -xf` copies the archive on top of the repo but never removes files the archive
+no longer contains. After 1.0.7 dropped the photo-tagging files, the old copies stayed in the repo
+and the build failed with `Unresolved reference 'label'` in `core/ai/MlKitImageLabeler.kt`.
+
+Fix: mirror instead, with `rsync -a --delete --exclude .git --exclude .github "$S"/ ./`.
+The current `sync.yml` does this. If a build reports a file that is not in the newest archive,
+suspect a stale file before suspecting the code.

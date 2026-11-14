@@ -85,10 +85,6 @@ object FileQueryBuilder {
         if (spec.availableOfflineOnly) where.append(" AND isAvailableOffline = 1")
         if (spec.hiddenOnly) where.append(" AND isHidden = 1")
         if (spec.archivedOnly) where.append(" AND isArchived = 1")
-        spec.personId?.let { person ->
-            where.append(" AND id IN (SELECT fileId FROM faces WHERE personId = ?)")
-            args.add(person)
-        }
         coveringColumn(spec)?.let { column ->
             trees += folderTree("covering_folders", column)
             where.append(notUnder("covering_folders"))

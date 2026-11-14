@@ -10,7 +10,6 @@ import com.adnan.memoracloud.core.media.mediaModule
 import com.adnan.memoracloud.core.network.networkModule
 import com.adnan.memoracloud.core.power.powerModule
 import com.adnan.memoracloud.core.permissions.permissionsModule
-import com.adnan.memoracloud.core.people.peopleModule
 import com.adnan.memoracloud.core.proxy.proxyModule
 import com.adnan.memoracloud.core.publish.publishModule
 import com.adnan.memoracloud.core.security.securityModule
@@ -28,7 +27,6 @@ import com.adnan.memoracloud.presentation.presentationModule
 
 val appModules = listOf(
     commonModule,
-    peopleModule,
     cryptoModule,
     dispatchersModule,
     filesModule,

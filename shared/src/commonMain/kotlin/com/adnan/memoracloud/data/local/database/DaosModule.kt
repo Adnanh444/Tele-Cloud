@@ -15,6 +15,4 @@ val daosModule = module {
     single { get<MemoraCloudDatabase>().filePartDao() }
     single { get<MemoraCloudDatabase>().proxyDao() }
     single { get<MemoraCloudDatabase>().folderTombstoneDao() }
-    single { get<MemoraCloudDatabase>().peopleDao() }
-    single { get<MemoraCloudDatabase>().faceDao() }
 }

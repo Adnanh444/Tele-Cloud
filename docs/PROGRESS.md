@@ -1,6 +1,6 @@
 # Progress — what is done, what is next
 
-Last updated after Part 3b slice 1 (AI tagging). "Written" means the code is in `MemoraCloud-source.zip` and reviewed
+Last updated after Part 4a (People). "Written" means the code is in the newest `MemoraCloud-source-*.zip` and reviewed
 statically (imports, resource keys, XML, brace balance) — it is **not** called "tested" until it has
 run on the phone, because there is no Android SDK in this workspace.
 
@@ -11,11 +11,11 @@ run on the phone, because there is no Android SDK in this workspace.
 | 2.1 | Updater diagnostics: every check failure now has a reason, restored install state after process death, stale-APK cleanup, install logging | ✅ written · ⏳ ships with the next release |
 | 3a | Automatic backup-folder detection from the device (MediaStore + fallback walk), **Search again**, new folders appear on their own | ✅ written · ⏳ device test pending |
 | 3c | "What to back up" switches (photos, videos, audio, documents, archives, other) + consent dialog before *Delete local copy after backup* | ✅ written · ⏳ device test pending |
-| 3b | Photo tags + tag search (1.0.6) | ❌ **removed on request** — user wants People, not search-by-tag. `photo_labels` is dropped in the v18→v19 migration |
-| 4a | People: on-device face detection + 192-float signatures + grouping, People strip in Gallery, person filter, Settings switch/counts/forget | ✅ written · ⏳ device test (`docs/PART4_PEOPLE.md`) |
-| 4b | Rename a person, merge two groups, semantic search | ⏳ next |
+| 3b | Photo tags + tag search (1.0.6) | ❌ removed — not wanted |
+| 4a | People / face grouping (on-device AI) | ❌ **removed on request** — user wants a light, simple app. Tables dropped in v18→v19, ML Kit + TensorFlow Lite + the 5 MB model all gone |
 | 3d | Graceful upload pause (finish current file, then stop) | ✅ written · optional, you skipped building it |
-| 4 | "Restore everything" wizard with destination-folder picker; duplicate-protection hardening + tests; restore/backup status polish | ⏳ not started |
+| 4 | **Restore from Telegram** wizard: scope (everything / media / documents / audio), skip files already on device, live counts, queue the restore | ✅ written · ⏳ device test (`docs/PART4_RESTORE.md`) |
+| 4.1 | Choose an arbitrary device folder (SAF picker), duplicate-protection unit tests, restore status polish | ⏳ next |
 | 5 | Final QA pass, honest feature list, mobile upload guide refresh | ⏳ not started |
 
 ## Graceful upload pause — DONE (Part 3d)
@@ -61,5 +61,7 @@ Planned implementation (agreed, not yet written):
 
 * No "Restore everything" wizard — restore works per file/folder from Files/Transfers/Trash.
 * Duplicate protection is implemented (SHA-256 + records) but has no unit tests of its own.
-* AI is the one large brief item with zero code so far.
+* AI: photo tagging was built and then removed on request; People (face grouping) is in 1.0.7 but
+  has never run on a device, and renaming/merging groups does not exist yet.
 * The updater has never executed on a real device.
+* Nothing in 1.0.7 is compiled yet — 1.0.6 was the last version that reached a phone.

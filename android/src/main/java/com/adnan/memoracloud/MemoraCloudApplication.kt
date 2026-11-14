@@ -4,7 +4,6 @@ import android.app.Application
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import com.adnan.memoracloud.core.people.FaceScanScheduler
 import com.adnan.memoracloud.core.common.AppNotifications
 import com.adnan.memoracloud.core.common.SafeLog
 import com.adnan.memoracloud.core.logging.DebugLogController
@@ -52,8 +51,6 @@ class MemoraCloudApplication : Application(), SingletonImageLoader.Factory {
 
     private val proxyFailover: ProxyFailover by inject()
 
-    private val faceScanScheduler: FaceScanScheduler by inject()
-
     private val debugLogController: DebugLogController by inject()
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -80,7 +77,6 @@ class MemoraCloudApplication : Application(), SingletonImageLoader.Factory {
             publishScheduler.kick()
             trashRepository.repairTrashTree()
             val prefs = settingsRepository.preferences.first()
-            if (prefs.faceGroupingEnabled) faceScanScheduler.enqueue()
             maintenanceScheduler.scheduleAll(
                 backupEnabled = prefs.autoBackupEnabled && prefs.backupIntervalHours > 0,
                 backupIntervalHours = prefs.backupIntervalHours,
