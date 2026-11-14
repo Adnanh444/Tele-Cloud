@@ -134,7 +134,7 @@ class UpdateChecker(
             ?: release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
             ?: return UpdateCheck.Failed("release $latest has no APK to install")
 
-        UpdateCheck.Available(
+        return UpdateCheck.Available(
             AppRelease(
                 version = latest,
                 notes = release.body.orEmpty().trim(),
