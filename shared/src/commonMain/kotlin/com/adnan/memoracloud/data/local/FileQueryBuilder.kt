@@ -56,13 +56,7 @@ object FileQueryBuilder {
             args.addAll(spec.categories.map { it.name })
         }
         spec.nameQuery?.takeIf { it.isNotBlank() }?.let {
-            // The same box searches names and on-device photo tags, so typing "food" or "dog"
-            // finds pictures whose file name says nothing about them.
-            where.append(
-                " AND (name LIKE ? ESCAPE '\\'" +
-                        " OR id IN (SELECT fileId FROM photo_labels WHERE labels LIKE ? ESCAPE '\\'))"
-            )
-            args.add("%${escapeLike(it)}%")
+            where.append(" AND name LIKE ? ESCAPE '\\'")
             args.add("%${escapeLike(it)}%")
         }
         spec.extension?.takeIf { it.isNotBlank() }?.let {
@@ -91,6 +85,10 @@ object FileQueryBuilder {
         if (spec.availableOfflineOnly) where.append(" AND isAvailableOffline = 1")
         if (spec.hiddenOnly) where.append(" AND isHidden = 1")
         if (spec.archivedOnly) where.append(" AND isArchived = 1")
+        spec.personId?.let { person ->
+            where.append(" AND id IN (SELECT fileId FROM faces WHERE personId = ?)")
+            args.add(person)
+        }
         coveringColumn(spec)?.let { column ->
             trees += folderTree("covering_folders", column)
             where.append(notUnder("covering_folders"))

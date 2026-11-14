@@ -24,7 +24,10 @@ import com.adnan.memoracloud.domain.model.FileQuerySpec
 import com.adnan.memoracloud.domain.model.FileSortField
 import com.adnan.memoracloud.domain.model.MediaAlbum
 import com.adnan.memoracloud.domain.model.SortDirection
+import com.adnan.memoracloud.domain.model.ViewMode
+import com.adnan.memoracloud.domain.model.Person
 import com.adnan.memoracloud.domain.repository.FileRepository
+import com.adnan.memoracloud.domain.repository.PeopleRepository
 import com.adnan.memoracloud.domain.repository.SettingsRepository
 import com.adnan.memoracloud.domain.repository.SyncRepository
 import com.adnan.memoracloud.domain.repository.TransferRepository
@@ -70,6 +73,7 @@ class GalleryViewModel(
     private val settingsRepository: SettingsRepository,
     private val syncRepository: SyncRepository,
     private val makeAvailableOffline: MakeAvailableOfflineUseCase,
+    private val peopleRepository: PeopleRepository,
     private val clipboard: FileClipboard
 ) : ViewModel() {
 
@@ -92,6 +96,19 @@ class GalleryViewModel(
     private val isAlbumView: Boolean = route != null
 
     private val tab = MutableStateFlow(GalleryTab.ALL)
+
+    /** Set when the user taps a face in the People strip; filters the grid to that person. */
+    private val personFilter = MutableStateFlow<Long?>(null)
+
+    private val people: Flow<List<Person>> = peopleRepository.observePeople()
+
+    fun selectPerson(personId: Long) {
+        personFilter.value = if (personFilter.value == personId) null else personId
+    }
+
+    fun clearPersonFilter() {
+        personFilter.value = null
+    }
     private val sort = settingsRepository.preferences
         .map { it.gallerySortField to it.gallerySortDirection }
         .distinctUntilChanged()
@@ -106,8 +123,9 @@ class GalleryViewModel(
     private val spec: Flow<FileQuerySpec> = combine(
         tab,
         sort,
-        settingsRepository.preferences
-    ) { currentTab, (field, direction), _ ->
+        settingsRepository.preferences,
+        personFilter
+    ) { currentTab, (field, direction), _, person ->
         FileQuerySpec(
             folderId = albumFolderId,
             filterByFolder = isAlbumView,
@@ -118,6 +136,7 @@ class GalleryViewModel(
             },
             showHidden = false,
             showArchived = false,
+            personId = person,
             sortField = field,
             sortDirection = direction
         )
@@ -167,17 +186,27 @@ class GalleryViewModel(
             .distinctUntilChanged(),
         combine(
             albums,
-            settingsRepository.preferences.map { it.galleryViewMode }.distinctUntilChanged()
-        ) { albumList, mode -> albumList to mode }
+            settingsRepository.preferences.map { it.galleryViewMode }.distinctUntilChanged(),
+            combine(people, personFilter) { list, id -> list to id }
+        ) { albumList, mode, peopleState ->
+            val (list, id) = peopleState
+            GalleryExtras(
+                albums = albumList,
+                viewMode = mode,
+                people = list,
+                selectedPerson = list.firstOrNull { it.id == id }
+            )
+        }
     ) { currentTab, (field, direction), selectionState, sizes, extras ->
         val (selected, capabilities) = selectionState
-        val (albumList, mode) = extras
         val (gridSize, albumGridSize) = sizes
         GalleryUiState(
             tab = currentTab,
-            albums = albumList,
+            albums = extras.albums,
+            people = extras.people,
+            selectedPerson = extras.selectedPerson,
             albumTitle = route?.title,
-            viewMode = mode,
+            viewMode = extras.viewMode,
             isAlbumView = isAlbumView,
             gridSize = gridSize,
             albumGridSize = albumGridSize,
@@ -406,3 +435,11 @@ class GalleryViewModel(
         private const val MIN_REFRESH_VISIBLE_MS = 700L
     }
 }
+
+/** Everything the grid needs from preferences and the People strip. */
+private data class GalleryExtras(
+    val albums: List<MediaAlbum>,
+    val viewMode: ViewMode,
+    val people: List<Person>,
+    val selectedPerson: Person?
+)

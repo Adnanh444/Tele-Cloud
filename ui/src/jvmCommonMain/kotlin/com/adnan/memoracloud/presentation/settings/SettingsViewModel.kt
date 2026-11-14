@@ -11,7 +11,7 @@ import com.adnan.memoracloud.core.telegram.TelegramClient
 import com.adnan.memoracloud.core.telegram.TelegramUser
 import com.adnan.memoracloud.core.transfer.MaintenanceScheduler
 import com.adnan.memoracloud.core.transfer.TransferScheduler
-import com.adnan.memoracloud.core.ai.PhotoTagScheduler
+import com.adnan.memoracloud.core.people.FaceScanScheduler
 import com.adnan.memoracloud.core.update.UpdateCheck
 import com.adnan.memoracloud.core.update.UpdateChecker
 import com.adnan.memoracloud.data.repository.LocalDataWiper
@@ -42,7 +42,10 @@ import com.adnan.memoracloud.resources.rebuild_locked_files
 import com.adnan.memoracloud.resources.settings_debug_log_empty
 import com.adnan.memoracloud.resources.settings_free_up_none
 import com.adnan.memoracloud.resources.settings_nothing_to_remove
-import com.adnan.memoracloud.resources.settings_tag_photos_now_started
+import com.adnan.memoracloud.resources.settings_faces_forgotten
+import com.adnan.memoracloud.resources.settings_scan_photos_started
+import com.adnan.memoracloud.domain.repository.PeopleRepository
+import com.adnan.memoracloud.domain.people.PeopleHealth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -79,7 +82,8 @@ class SettingsViewModel(
     val permissionChecker: PermissionChecker,
     private val updateChecker: UpdateChecker,
     private val debugLogRecorder: DebugLogRecorder,
-    private val photoTagScheduler: PhotoTagScheduler
+    private val faceScanScheduler: FaceScanScheduler,
+    private val peopleRepository: PeopleRepository
 ) : ViewModel() {
 
     private val user = MutableStateFlow<TelegramUser?>(null)
@@ -92,6 +96,9 @@ class SettingsViewModel(
 
     private val _shareRequests = MutableSharedFlow<ShareRequest>(extraBufferCapacity = 1)
     val shareRequests = _shareRequests.asSharedFlow()
+
+    private val _peopleHealth = MutableStateFlow(PeopleHealth(0, 0, 0, 0))
+    val peopleHealth: StateFlow<PeopleHealth> = _peopleHealth.asStateFlow()
 
     private val _keyBackupWorking = MutableStateFlow(false)
     val keyBackupWorking: StateFlow<Boolean> = _keyBackupWorking.asStateFlow()
@@ -352,17 +359,35 @@ class SettingsViewModel(
         }
     }
 
-    /** Photo tagging: the switch drives both the setting and the background work. */
-    fun setPhotoIntelligence(enabled: Boolean) {
+    /** People: the switch drives both the setting and the background work. */
+    fun setPeopleEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.update { it.copy(aiLabelsEnabled = enabled) }
-            if (enabled) photoTagScheduler.enqueue() else photoTagScheduler.cancel()
+            settingsRepository.update { it.copy(faceGroupingEnabled = enabled) }
+            if (enabled) faceScanScheduler.enqueue() else faceScanScheduler.cancel()
+            loadPeopleHealth()
         }
     }
 
-    fun tagPhotosNow() {
-        photoTagScheduler.enqueue()
-        _messages.tryEmit(UiText.Resource(Res.string.settings_tag_photos_now_started))
+    fun scanPhotosNow() {
+        faceScanScheduler.enqueue()
+        _messages.tryEmit(UiText.Resource(Res.string.settings_scan_photos_started))
+    }
+
+    /** Deletes every face signature and group on this device. Photos are not touched. */
+    fun forgetFaces() {
+        viewModelScope.launch {
+            peopleRepository.forgetAll()
+            loadPeopleHealth()
+            _messages.tryEmit(UiText.Resource(Res.string.settings_faces_forgotten))
+        }
+    }
+
+    fun refreshPeopleHealth() {
+        viewModelScope.launch { loadPeopleHealth() }
+    }
+
+    private suspend fun loadPeopleHealth() {
+        _peopleHealth.value = withContext(Dispatchers.IO) { peopleRepository.health() }
     }
 
     fun dismissUpdate() {

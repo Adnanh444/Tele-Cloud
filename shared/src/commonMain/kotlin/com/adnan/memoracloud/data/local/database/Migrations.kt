@@ -9,13 +9,37 @@ import androidx.sqlite.execSQL
  * cascade here mid-migration, and the table is small enough that a manual cleanup is cheaper than
  * the risk.
  */
-val MIGRATION_17_18 = object : Migration(17, 18) {
+/**
+ * 1.0.6 briefly shipped on-device photo tags. The feature was replaced by face grouping, so the
+ * table it wrote to is dropped here and the three People tables are created in the same step.
+ */
+val MIGRATION_18_19 = object : Migration(18, 19) {
     override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `photo_labels`")
         connection.execSQL(
-            "CREATE TABLE IF NOT EXISTS `photo_labels` (`fileId` TEXT NOT NULL, `labels` TEXT NOT " +
-                    "NULL, `primaryLabel` TEXT NOT NULL, `confidence` REAL NOT NULL, " +
-                    "`updatedAt` INTEGER NOT NULL, PRIMARY KEY(`fileId`))"
+            "CREATE TABLE IF NOT EXISTS `people` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`name` TEXT NOT NULL, `coverPath` TEXT, `createdAt` INTEGER NOT NULL)"
         )
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `faces` (`id` TEXT NOT NULL, `fileId` TEXT NOT NULL, " +
+                    "`personId` INTEGER, `embedding` BLOB NOT NULL, `cropPath` TEXT NOT NULL, " +
+                    "`score` REAL NOT NULL, `addedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+        )
+        connection.execSQL("CREATE INDEX IF NOT EXISTS `index_faces_fileId` ON `faces` (`fileId`)")
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_faces_personId` ON `faces` (`personId`)"
+        )
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `face_scans` (`fileId` TEXT NOT NULL, " +
+                    "`faceCount` INTEGER NOT NULL, `scannedAt` INTEGER NOT NULL, PRIMARY KEY(`fileId`))"
+        )
+    }
+}
+
+/** Upgrades from 17 straight to 19 are covered by running both steps. */
+val MIGRATION_17_19 = object : Migration(17, 19) {
+    override fun migrate(connection: SQLiteConnection) {
+        MIGRATION_18_19.migrate(connection)
     }
 }
 

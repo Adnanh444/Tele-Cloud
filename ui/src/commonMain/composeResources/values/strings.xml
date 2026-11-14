@@ -420,6 +420,9 @@
     <!-- Gallery -->
     <string name="album_not_in_folder">Not in a folder</string>
     <string name="gallery_albums_appear_organise_media">Albums appear as you organise media into folders.</string>
+    <string name="gallery_people">People</string>
+    <string name="gallery_people_summary">Tap a face to see every photo of that person</string>
+    <string name="gallery_people_empty">No people yet. Photos are scanned in the background while Backups \u2192 People is on.</string>
     <string name="gallery_no_albums">No albums</string>
     <string name="gallery_no_media">No media</string>
     <string name="gallery_photos_videos_appear_here">Photos and videos appear here after import or backup.</string>
@@ -788,11 +791,18 @@
     <string name="settings_choose_folder_device">Choose any folder on this device</string>
     <string name="settings_excluded_files_folders_skipped">Excluded files and folders are skipped by automatic backup.</string>
     <string name="settings_exclusion_remove_message">\"%1$s\" will be included in backups again.</string>
-    <string name="settings_photo_intelligence">Photo intelligence</string>
-    <string name="settings_photo_intelligence_summary">Tags photos on this device so search can find them by what is in them. Nothing is uploaded anywhere.</string>
-    <string name="settings_tag_photos_now">Tag photos now</string>
-    <string name="settings_tag_photos_now_summary">Runs in the background and is safe to leave</string>
-    <string name="settings_tag_photos_now_started">Tagging photos in the background</string>
+    <string name="settings_people">People</string>
+    <string name="settings_people_summary">Groups the faces in your photos on this device, so you can open a person and see every photo they appear in. Nothing is uploaded.</string>
+    <string name="settings_scan_photos_now">Scan photos now</string>
+    <string name="settings_scan_photos_summary">Runs in the background and is safe to leave</string>
+    <string name="settings_scan_photos_started">Scanning photos in the background</string>
+    <string name="settings_people_status">%1$d people \u00b7 %2$d faces \u00b7 %3$d photos scanned</string>
+    <string name="settings_people_waiting">%1$d photos waiting to be scanned</string>
+    <string name="settings_people_none_yet">No faces found yet</string>
+    <string name="settings_forget_faces">Forget faces</string>
+    <string name="settings_forget_faces_summary">Deletes every face and group stored on this device</string>
+    <string name="settings_forget_faces_confirm">Every face signature and group will be removed from this device. Your photos and your Telegram backup are not touched. Faces are found again the next time photos are scanned.</string>
+    <string name="settings_faces_forgotten">Faces forgotten</string>
     <string name="settings_exclusions">Exclusions</string>
     <string name="settings_files_folders_skipped_backup">Files and folders skipped by backup</string>
     <string name="settings_item_lives_app_cloud">That item lives in an app or cloud provider with no device path. Add a Pattern rule instead.</string>

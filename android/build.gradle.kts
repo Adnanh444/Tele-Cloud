@@ -151,7 +151,8 @@ dependencies {
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
-    implementation(libs.mlkit.image.labeling)
+    implementation(libs.mlkit.face.detection)
+    implementation(libs.tensorflow.lite)
     implementation(libs.koin.compose.viewmodel)
     implementation(libs.koin.androidx.workmanager)
 

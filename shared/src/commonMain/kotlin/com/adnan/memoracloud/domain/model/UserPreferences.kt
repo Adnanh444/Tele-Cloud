@@ -54,7 +54,8 @@ data class UserPreferences(
     val preferredSubtitleLanguage: String = "",
 
     /** On-device photo tagging. Off means nothing is analysed, ever. */
-    val aiLabelsEnabled: Boolean = true,
+    /** Group faces on this device so photos can be found by the person in them. */
+    val faceGroupingEnabled: Boolean = true,
     val backupNotifications: Boolean = true,
     val failureNotifications: Boolean = true,
 

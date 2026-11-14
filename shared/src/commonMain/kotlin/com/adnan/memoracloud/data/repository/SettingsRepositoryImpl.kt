@@ -98,7 +98,8 @@ class SettingsRepositoryImpl(
                 ?: defaults.autoLockTimeoutMinutes,
             encryptFiles = this[PreferenceKeys.ENCRYPT_FILES] ?: defaults.encryptFiles,
             queuePaused = this[PreferenceKeys.QUEUE_PAUSED] ?: defaults.queuePaused,
-            aiLabelsEnabled = this[PreferenceKeys.AI_LABELS_ENABLED] ?: defaults.aiLabelsEnabled,
+            faceGroupingEnabled = this[PreferenceKeys.FACE_GROUPING_ENABLED]
+                ?: defaults.faceGroupingEnabled,
             deleteAfterUpload = this[PreferenceKeys.DELETE_AFTER_UPLOAD]
                 ?: defaults.deleteAfterUpload,
             encryptThumbnails = this[PreferenceKeys.ENCRYPT_THUMBNAILS]
@@ -198,7 +199,7 @@ class SettingsRepositoryImpl(
         this[PreferenceKeys.ENCRYPT_FILES] = prefs.encryptFiles
         this[PreferenceKeys.DELETE_AFTER_UPLOAD] = prefs.deleteAfterUpload
         this[PreferenceKeys.QUEUE_PAUSED] = prefs.queuePaused
-        this[PreferenceKeys.AI_LABELS_ENABLED] = prefs.aiLabelsEnabled
+        this[PreferenceKeys.FACE_GROUPING_ENABLED] = prefs.faceGroupingEnabled
         this[PreferenceKeys.ENCRYPT_THUMBNAILS] = prefs.encryptThumbnails
         this[PreferenceKeys.KEY_BACKUP_CREATED] = prefs.keyBackupCreated
         this[PreferenceKeys.FOLDER_OWNERSHIP_REPAIRED] = prefs.folderOwnershipRepaired

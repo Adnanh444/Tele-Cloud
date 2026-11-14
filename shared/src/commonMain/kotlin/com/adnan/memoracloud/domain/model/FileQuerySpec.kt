@@ -17,6 +17,8 @@ data class FileQuerySpec(
     val availableOfflineOnly: Boolean = false,
     val hiddenOnly: Boolean = false,
     val archivedOnly: Boolean = false,
+    /** Only photos this person appears in. */
+    val personId: Long? = null,
     val showHidden: Boolean = false,
     val showArchived: Boolean = false,
     val sortField: FileSortField = FileSortField.NAME,

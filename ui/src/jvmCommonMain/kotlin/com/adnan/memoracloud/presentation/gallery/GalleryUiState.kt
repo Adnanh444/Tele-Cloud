@@ -2,6 +2,7 @@ package com.adnan.memoracloud.presentation.gallery
 
 import com.adnan.memoracloud.domain.model.FileSortField
 import com.adnan.memoracloud.domain.model.MediaAlbum
+import com.adnan.memoracloud.domain.model.Person
 import com.adnan.memoracloud.domain.model.SortDirection
 import com.adnan.memoracloud.domain.model.ViewMode
 import com.adnan.memoracloud.presentation.components.SelectionCapabilities
@@ -9,6 +10,9 @@ import com.adnan.memoracloud.presentation.components.SelectionCapabilities
 data class GalleryUiState(
     val tab: GalleryTab = GalleryTab.ALL,
     val albums: List<MediaAlbum> = emptyList(),
+    val people: List<Person> = emptyList(),
+    /** Non-null while the grid is filtered to one person. */
+    val selectedPerson: Person? = null,
     val albumTitle: String? = null,
     val viewMode: ViewMode = ViewMode.GRID,
     val isAlbumView: Boolean = false,

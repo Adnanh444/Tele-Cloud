@@ -65,6 +65,22 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import java.io.File
+import com.adnan.memoracloud.domain.model.Person
+import com.adnan.memoracloud.resources.gallery_people
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -571,6 +587,14 @@ fun GalleryScreen(
                 }
             }
 
+            if (!state.isAlbumView && state.tab != GalleryTab.ALBUMS) {
+                PeopleStrip(
+                    people = state.people,
+                    selected = state.selectedPerson,
+                    onSelect = viewModel::selectPerson
+                )
+            }
+
             if (state.tab == GalleryTab.ALBUMS && !state.isAlbumView) {
                 if (!state.loaded) {
                     CollectionSkeleton(
@@ -799,3 +823,73 @@ fun GalleryScreen(
 }
 
 private const val TAB_SCROLL_THRESHOLD = 6f
+
+/**
+ * Faces found on this device, one avatar each. Tapping filters the grid to that person; tapping the
+ * same avatar again clears the filter. Hidden entirely until at least one face has been grouped.
+ */
+@Composable
+private fun PeopleStrip(
+    people: List<Person>,
+    selected: Person?,
+    onSelect: (Long) -> Unit
+) {
+    if (people.isEmpty()) return
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(Res.string.gallery_people),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            itemsIndexed(people, key = { _, person -> person.id }) { _, person ->
+                val isSelected = person.id == selected?.id
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .width(64.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .clickable { onSelect(person.id) }
+                        .padding(vertical = 2.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = if (isSelected) {
+                            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                        } else {
+                            null
+                        },
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        val cover = person.coverPath
+                        if (cover != null) {
+                            AsyncImage(
+                                model = File(cover),
+                                contentDescription = person.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = person.name,
+                                modifier = Modifier.padding(14.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = person.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}

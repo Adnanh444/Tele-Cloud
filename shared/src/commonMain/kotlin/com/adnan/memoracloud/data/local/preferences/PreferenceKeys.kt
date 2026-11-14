@@ -69,7 +69,7 @@ object PreferenceKeys {
     val FAILURE_NOTIFICATIONS = booleanPreferencesKey("failure_notifications")
 
     val QUEUE_PAUSED = booleanPreferencesKey("queue_paused")
-    val AI_LABELS_ENABLED = booleanPreferencesKey("ai_labels_enabled")
+    val FACE_GROUPING_ENABLED = booleanPreferencesKey("face_grouping_enabled")
     val TRANSFER_CONCURRENCY = intPreferencesKey("transfer_concurrency")
     val TRANSFER_RETRY_COUNT = intPreferencesKey("transfer_retry_count")
     val ALLOW_METERED_TRANSFERS = booleanPreferencesKey("allow_metered_transfers")

@@ -11,8 +11,9 @@ run on the phone, because there is no Android SDK in this workspace.
 | 2.1 | Updater diagnostics: every check failure now has a reason, restored install state after process death, stale-APK cleanup, install logging | ✅ written · ⏳ ships with the next release |
 | 3a | Automatic backup-folder detection from the device (MediaStore + fallback walk), **Search again**, new folders appear on their own | ✅ written · ⏳ device test pending |
 | 3c | "What to back up" switches (photos, videos, audio, documents, archives, other) + consent dialog before *Delete local copy after backup* | ✅ written · ⏳ device test pending |
-| 3b-1 | On-device AI slice 1: photo tagging, `photo_labels` table + v17→v18 migration, background worker, on/off setting, **search by tag** | ✅ written · ⏳ device test (`docs/PART3B_AI.md`) |
-| 3b-2 | AI slice 2: tag chips in the viewer/gallery, tags in the cloud manifest, face grouping, semantic search | ⏳ next |
+| 3b | Photo tags + tag search (1.0.6) | ❌ **removed on request** — user wants People, not search-by-tag. `photo_labels` is dropped in the v18→v19 migration |
+| 4a | People: on-device face detection + 192-float signatures + grouping, People strip in Gallery, person filter, Settings switch/counts/forget | ✅ written · ⏳ device test (`docs/PART4_PEOPLE.md`) |
+| 4b | Rename a person, merge two groups, semantic search | ⏳ next |
 | 3d | Graceful upload pause (finish current file, then stop) | ✅ written · optional, you skipped building it |
 | 4 | "Restore everything" wizard with destination-folder picker; duplicate-protection hardening + tests; restore/backup status polish | ⏳ not started |
 | 5 | Final QA pass, honest feature list, mobile upload guide refresh | ⏳ not started |

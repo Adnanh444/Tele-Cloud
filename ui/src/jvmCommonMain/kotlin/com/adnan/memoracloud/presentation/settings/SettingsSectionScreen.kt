@@ -26,6 +26,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -63,6 +64,7 @@ import com.adnan.memoracloud.resources.backup_interval_labels
 import com.adnan.memoracloud.resources.backup_interval_with_sweep
 import com.adnan.memoracloud.resources.backup_size_limit_labels
 import com.adnan.memoracloud.resources.common_back
+import com.adnan.memoracloud.resources.common_cancel
 import com.adnan.memoracloud.resources.common_clear
 import com.adnan.memoracloud.resources.common_free_space
 import com.adnan.memoracloud.resources.common_storage_channels
@@ -113,10 +115,16 @@ import com.adnan.memoracloud.resources.settings_encrypt_thumbnails
 import com.adnan.memoracloud.resources.settings_encrypt_uploads
 import com.adnan.memoracloud.resources.settings_encryption_stays_off
 import com.adnan.memoracloud.resources.settings_exclusions
-import com.adnan.memoracloud.resources.settings_photo_intelligence
-import com.adnan.memoracloud.resources.settings_photo_intelligence_summary
-import com.adnan.memoracloud.resources.settings_tag_photos_now
-import com.adnan.memoracloud.resources.settings_tag_photos_now_summary
+import com.adnan.memoracloud.resources.settings_people
+import com.adnan.memoracloud.resources.settings_people_summary
+import com.adnan.memoracloud.resources.settings_scan_photos_now
+import com.adnan.memoracloud.resources.settings_scan_photos_summary
+import com.adnan.memoracloud.resources.settings_forget_faces
+import com.adnan.memoracloud.resources.settings_forget_faces_summary
+import com.adnan.memoracloud.resources.settings_forget_faces_confirm
+import com.adnan.memoracloud.resources.settings_people_status
+import com.adnan.memoracloud.resources.settings_people_waiting
+import com.adnan.memoracloud.resources.settings_people_none_yet
 import com.adnan.memoracloud.resources.settings_failures
 import com.adnan.memoracloud.resources.settings_files_folders_skipped_backup
 import com.adnan.memoracloud.resources.settings_files_sealed_leaving_device
@@ -437,8 +445,11 @@ private fun BackupSection(
         }
     }
     var showIntervalDialog by remember { mutableStateOf(false) }
+    val peopleHealth by viewModel.peopleHealth.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.refreshPeopleHealth() }
     var showSizeLimitDialog by remember { mutableStateOf(false) }
     var showTypeDialog by remember { mutableStateOf(false) }
+    var confirmForgetFaces by remember { mutableStateOf(false) }
 
     val categoryLabels = listOf(
         FileCategory.IMAGE to Res.string.common_category_photos,
@@ -480,6 +491,27 @@ private fun BackupSection(
                 }
             },
             onDismiss = { showTypeDialog = false }
+        )
+    }
+
+    if (confirmForgetFaces) {
+        AlertDialog(
+            onDismissRequest = { confirmForgetFaces = false },
+            title = { Text(stringResource(Res.string.settings_forget_faces)) },
+            text = { Text(stringResource(Res.string.settings_forget_faces_confirm)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmForgetFaces = false
+                        viewModel.forgetFaces()
+                    }
+                ) { Text(stringResource(Res.string.settings_remove)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmForgetFaces = false }) {
+                    Text(stringResource(Res.string.common_cancel))
+                }
+            }
         )
     }
 
@@ -596,17 +628,36 @@ private fun BackupSection(
         }
         add {
             SettingsSwitchRow(
-                title = stringResource(Res.string.settings_photo_intelligence),
-                subtitle = stringResource(Res.string.settings_photo_intelligence_summary),
-                checked = prefs.aiLabelsEnabled,
-                onChange = { value -> viewModel.setPhotoIntelligence(value) }
+                title = stringResource(Res.string.settings_people),
+                subtitle = stringResource(Res.string.settings_people_summary),
+                checked = prefs.faceGroupingEnabled,
+                onChange = { value -> viewModel.setPeopleEnabled(value) }
             )
         }
-        add(visible = prefs.aiLabelsEnabled) {
+        add(visible = prefs.faceGroupingEnabled) {
             SettingsClickRow(
-                title = stringResource(Res.string.settings_tag_photos_now),
-                subtitle = stringResource(Res.string.settings_tag_photos_now_summary),
-                onClick = viewModel::tagPhotosNow
+                title = stringResource(Res.string.settings_scan_photos_now),
+                subtitle = when {
+                    peopleHealth.people > 0 -> stringResource(
+                        Res.string.settings_people_status,
+                        peopleHealth.people,
+                        peopleHealth.faces,
+                        peopleHealth.scannedPhotos
+                    )
+
+                    peopleHealth.waitingPhotos > 0 ->
+                        stringResource(Res.string.settings_people_waiting, peopleHealth.waitingPhotos)
+
+                    else -> stringResource(Res.string.settings_people_none_yet)
+                },
+                onClick = viewModel::scanPhotosNow
+            )
+        }
+        add(visible = prefs.faceGroupingEnabled && peopleHealth.people > 0) {
+            SettingsClickRow(
+                title = stringResource(Res.string.settings_forget_faces),
+                subtitle = stringResource(Res.string.settings_forget_faces_summary),
+                onClick = { confirmForgetFaces = true }
             )
         }
     }

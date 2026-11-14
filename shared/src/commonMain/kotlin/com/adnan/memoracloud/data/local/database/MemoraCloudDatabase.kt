@@ -12,7 +12,8 @@ import com.adnan.memoracloud.data.local.dao.ProxyDao
 import com.adnan.memoracloud.data.local.dao.FolderDao
 import com.adnan.memoracloud.data.local.dao.FolderTombstoneDao
 import com.adnan.memoracloud.data.local.dao.PendingDeleteDao
-import com.adnan.memoracloud.data.local.dao.PhotoLabelDao
+import com.adnan.memoracloud.data.local.dao.FaceDao
+import com.adnan.memoracloud.data.local.dao.PeopleDao
 import com.adnan.memoracloud.data.local.dao.StorageChannelDao
 import com.adnan.memoracloud.data.local.dao.ThumbnailDao
 import com.adnan.memoracloud.data.local.dao.TransferDao
@@ -26,7 +27,9 @@ import com.adnan.memoracloud.data.local.entity.ProxyEntity
 import com.adnan.memoracloud.data.local.entity.FolderEntity
 import com.adnan.memoracloud.data.local.entity.FolderTombstoneEntity
 import com.adnan.memoracloud.data.local.entity.PendingDeleteEntity
-import com.adnan.memoracloud.data.local.entity.PhotoLabelEntity
+import com.adnan.memoracloud.data.local.entity.FaceEntity
+import com.adnan.memoracloud.data.local.entity.FaceScanEntity
+import com.adnan.memoracloud.data.local.entity.PersonEntity
 import com.adnan.memoracloud.data.local.entity.StorageChannelEntity
 import com.adnan.memoracloud.data.local.entity.ThumbnailEntity
 import com.adnan.memoracloud.data.local.entity.TransferEntity
@@ -46,9 +49,11 @@ import com.adnan.memoracloud.data.local.entity.TransferEntity
         FilePartEntity::class,
         ProxyEntity::class,
         FolderTombstoneEntity::class,
-        PhotoLabelEntity::class
+        PersonEntity::class,
+        FaceEntity::class,
+        FaceScanEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @ConstructedBy(MemoraCloudDatabaseConstructor::class)
@@ -65,7 +70,8 @@ abstract class MemoraCloudDatabase : RoomDatabase() {
     abstract fun filePartDao(): FilePartDao
     abstract fun proxyDao(): ProxyDao
     abstract fun folderTombstoneDao(): FolderTombstoneDao
-    abstract fun photoLabelDao(): PhotoLabelDao
+    abstract fun peopleDao(): PeopleDao
+    abstract fun faceDao(): FaceDao
 
     companion object {
         const val NAME = "memoracloud.db"

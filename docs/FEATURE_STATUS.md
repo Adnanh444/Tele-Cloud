@@ -4,7 +4,7 @@ Honest state of every requirement in the brief, mapped to the code that implemen
 Legend: **✅ inherited & working** (upstream code, rebranded, kept) · **🆕 added in this fork** ·
 **🚧 planned, not yet written** · **❌ not possible / not provided**
 
-Last updated: Part 3 (folders, per-type switches, delete consent, AI tagging slice 1).
+Last updated: Part 4 (People / face grouping).
 
 ---
 
@@ -143,9 +143,10 @@ mobile upload helper, version override, no desktop jobs.
   restore/backup status polish.
 * **Part 3 — folder auto-detection: done**; **per-type switches + delete consent: done**
   (`docs/PART3_CHANGES.md`).
-* **Part 3 — on-device AI, slice 1 done:** tagging + storage + migration + worker + opt-out +
-  search-by-tag (`docs/PART3B_AI.md`). Face grouping, semantic search, tag chips in the UI and
-  manifest persistence are still to come.
+* **Part 4 — People, done in 1.0.7:** on-device face detection, 192-float signatures, grouping,
+  a People strip in the Gallery with a per-person filter, and a Settings switch with live counts
+  (`docs/PART4_PEOPLE.md`). The 1.0.6 photo tagging was removed at the user's request. Renaming and
+  merging groups are the next slice.
 * **Desktop apps:** the module is still in the tree but no longer built or supported here.
 * **Localisation of new strings** beyond English.
 * **Silent self-update:** not possible without system privileges; Android will always show the

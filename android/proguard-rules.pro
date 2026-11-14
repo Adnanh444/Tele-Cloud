@@ -23,3 +23,11 @@
 -keepclasseswithmembers class com.adnan.memoracloud.data.remote.telegram.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# TensorFlow Lite: the interpreter is called through JNI, so R8 must not rename or strip it.
+-keep class org.tensorflow.lite.** { *; }
+-dontwarn org.tensorflow.lite.**
+
+# ML Kit face detection loads its bundled model reflectively.
+-keep class com.google.mlkit.** { *; }
+-dontwarn com.google.mlkit.**
