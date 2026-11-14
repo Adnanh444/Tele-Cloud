@@ -13,6 +13,7 @@ import com.adnan.memoracloud.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import com.adnan.memoracloud.domain.model.FileCategory
 
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
@@ -75,6 +76,10 @@ class SettingsRepositoryImpl(
             instantBackupEnabled = this[PreferenceKeys.INSTANT_BACKUP_ENABLED]
                 ?: defaults.instantBackupEnabled,
             backupFolders = this[PreferenceKeys.BACKUP_FOLDERS] ?: defaults.backupFolders,
+            backupCategories = this[PreferenceKeys.BACKUP_CATEGORIES]
+                ?.mapNotNull { name -> FileCategory.entries.firstOrNull { it.name == name } }
+                ?.toSet()
+                ?: defaults.backupCategories,
             backupWifiOnly = this[PreferenceKeys.BACKUP_WIFI_ONLY] ?: defaults.backupWifiOnly,
             downloadDirectory = this[PreferenceKeys.DOWNLOAD_DIRECTORY],
             backupChargingOnly = this[PreferenceKeys.BACKUP_CHARGING_ONLY]
@@ -176,6 +181,7 @@ class SettingsRepositoryImpl(
         this[PreferenceKeys.AUTO_BACKUP_ENABLED] = prefs.autoBackupEnabled
         this[PreferenceKeys.INSTANT_BACKUP_ENABLED] = prefs.instantBackupEnabled
         this[PreferenceKeys.BACKUP_FOLDERS] = prefs.backupFolders
+        this[PreferenceKeys.BACKUP_CATEGORIES] = prefs.backupCategories.map { it.name }.toSet()
         this[PreferenceKeys.BACKUP_WIFI_ONLY] = prefs.backupWifiOnly
         prefs.downloadDirectory?.let { this[PreferenceKeys.DOWNLOAD_DIRECTORY] = it }
             ?: remove(PreferenceKeys.DOWNLOAD_DIRECTORY)

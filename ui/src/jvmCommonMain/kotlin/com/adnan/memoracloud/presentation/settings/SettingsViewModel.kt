@@ -11,6 +11,7 @@ import com.adnan.memoracloud.core.telegram.TelegramClient
 import com.adnan.memoracloud.core.telegram.TelegramUser
 import com.adnan.memoracloud.core.transfer.MaintenanceScheduler
 import com.adnan.memoracloud.core.transfer.TransferScheduler
+import com.adnan.memoracloud.core.update.UpdateCheck
 import com.adnan.memoracloud.core.update.UpdateChecker
 import com.adnan.memoracloud.data.repository.LocalDataWiper
 import com.adnan.memoracloud.domain.model.BackupTrigger
@@ -326,14 +327,24 @@ class SettingsViewModel(
         if (_updateState.value is UpdateState.Checking) return
         viewModelScope.launch {
             _updateState.value = UpdateState.Checking
-            val release = updateChecker.newerRelease()
-            settingsRepository.update { it.copy(notifiedUpdateVersion = release?.version ?: "") }
+            val result = updateChecker.check()
             settingsRepository.update { it.copy(lastUpdateCheckAt = System.currentTimeMillis()) }
-            _updateState.value = if (release == null) {
-                _messages.tryEmit(UiText.Resource(Res.string.about_no_update))
-                UpdateState.Idle
-            } else {
-                UpdateState.Available(release)
+            _updateState.value = when (result) {
+                is UpdateCheck.Available -> {
+                    settingsRepository.update {
+                        it.copy(notifiedUpdateVersion = result.release.version)
+                    }
+                    UpdateState.Available(result.release)
+                }
+
+                is UpdateCheck.UpToDate -> {
+                    _messages.tryEmit(UiText.Resource(Res.string.about_no_update))
+                    UpdateState.Message(
+                        "Installed ${result.current} · latest release ${result.latest}"
+                    )
+                }
+
+                is UpdateCheck.Failed -> UpdateState.Message("Check failed: ${result.reason}")
             }
         }
     }

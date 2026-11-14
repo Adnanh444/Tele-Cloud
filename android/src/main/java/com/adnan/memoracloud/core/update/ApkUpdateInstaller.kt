@@ -24,9 +24,12 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Downloads the APK published on the GitHub release, checks it, and hands it to Android's package
@@ -54,6 +57,13 @@ class ApkUpdateInstaller(
 
     private val _state = MutableStateFlow<UpdateInstallState>(UpdateInstallState.Idle)
     override val state: StateFlow<UpdateInstallState> = _state.asStateFlow()
+
+    init {
+        // The user often leaves the app to grant the "install unknown apps" permission, and Android
+        // is free to kill us meanwhile. The verified APK is on disk, so restore the state from it
+        // instead of pretending nothing was ever downloaded.
+        CoroutineScope(Dispatchers.IO).launch { restoreFromDisk() }
+    }
 
     private val updatesDir: File
         get() = File(context.cacheDir, DIRECTORY).apply { mkdirs() }
@@ -90,11 +100,13 @@ class ApkUpdateInstaller(
         // tap Install again on the very same verified file.
         val apk = verifiedApk?.takeIf { it.exists() }
         if (apk == null) {
+            SafeLog.w(TAG, "Install tapped with no verified APK on disk")
             _state.value = UpdateInstallState.Failed(UpdateFailure.UNKNOWN)
             return
         }
         // Android 8+ requires the user to allow installs from this app.
         if (!context.packageManager.canRequestPackageInstalls()) {
+            SafeLog.w(TAG, "Install blocked: the app may not install unknown packages")
             openUnknownSourcesSetting()
             _state.value = UpdateInstallState.Failed(UpdateFailure.INSTALL_PERMISSION)
             return
@@ -110,6 +122,7 @@ class ApkUpdateInstaller(
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
+            SafeLog.d(TAG, "Handed the APK to the system installer")
             // Back to "ready" so the button stays useful if the user cancels inside Android's own
             // dialog and comes back.
             _state.value = UpdateInstallState.ReadyToInstall
@@ -255,32 +268,61 @@ class ApkUpdateInstaller(
     }
 
     /**
-     * Same certificate as the installed app, and a package name that matches. Also refuses a
-     * downgrade, which Android would reject anyway.
+     * Same package, newer version, same certificate as the installed app. A different signer would
+     * make Android refuse the install, and accepting a repacked APK is exactly what this guards
+     * against.
      */
-    internal fun signedLikeInstalledApp(apk: File): Boolean {
+    internal fun signedLikeInstalledApp(apk: File, requireNewer: Boolean = false): Boolean {
+        val archive = archiveInfo(apk) ?: return false
+        if (archive.packageName != context.packageName) return false
+        val installed = installedInfo() ?: return false
+        if (requireNewer && archive.longVersionCodeX() <= installed.longVersionCodeX()) return false
+        val archiveSigner = archive.firstSignerDigest() ?: return false
+        val installedSigner = installed.firstSignerDigest() ?: return false
+        return archiveSigner == installedSigner
+    }
+
+    private fun archiveInfo(apk: File): PackageInfo? {
         val manager = context.packageManager
-        val archive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             manager.getPackageArchiveInfo(apk.absolutePath, PackageManager.GET_SIGNING_CERTIFICATES)
         } else {
             @Suppress("DEPRECATION")
             manager.getPackageArchiveInfo(apk.absolutePath, PackageManager.GET_SIGNATURES)
-        } ?: return false
+        }
+    }
 
-        if (archive.packageName != context.packageName) return false
+    private fun installedInfo(): PackageInfo? = runCatching {
+        val manager = context.packageManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            manager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+        } else {
+            @Suppress("DEPRECATION")
+            manager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+        }
+    }.getOrNull()
 
-        val installed = runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                manager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-            } else {
-                @Suppress("DEPRECATION")
-                manager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
-            }
-        }.getOrNull() ?: return false
+    private fun PackageInfo.longVersionCodeX(): Long =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            versionCode.toLong()
+        }
 
-        val archiveSigner = archive.firstSignerDigest() ?: return false
-        val installedSigner = installed.firstSignerDigest() ?: return false
-        return archiveSigner == installedSigner
+    /** Re-adopts a previously verified APK, or deletes one that is stale or no longer valid. */
+    private suspend fun restoreFromDisk() {
+        val apk = apkFile.takeIf { it.exists() } ?: return
+        val valid = runCatching { signedLikeInstalledApp(apk, requireNewer = true) }
+            .onFailure { SafeLog.w(TAG, "Could not inspect the cached update APK", it) }
+            .getOrDefault(false)
+        if (!valid) {
+            apk.delete()
+            return
+        }
+        verifiedApk = apk
+        _state.value = UpdateInstallState.ReadyToInstall
+        SafeLog.d(TAG, "Recovered a downloaded update from cache")
     }
 
     private fun PackageInfo.firstSignerDigest(): String? {

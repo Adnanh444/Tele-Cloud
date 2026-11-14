@@ -77,6 +77,16 @@ import com.adnan.memoracloud.resources.settings_automatic_backup
 import com.adnan.memoracloud.resources.settings_back_new_media_instantly
 import com.adnan.memoracloud.resources.settings_background_playback
 import com.adnan.memoracloud.resources.settings_backup_folders_title
+import com.adnan.memoracloud.resources.settings_backup_types_none
+import com.adnan.memoracloud.resources.settings_backup_types_title
+import com.adnan.memoracloud.resources.settings_delete_after_upload_confirm
+import com.adnan.memoracloud.resources.settings_delete_after_upload_confirm_title
+import com.adnan.memoracloud.resources.common_category_archives
+import com.adnan.memoracloud.resources.common_category_audio
+import com.adnan.memoracloud.resources.common_category_documents
+import com.adnan.memoracloud.resources.common_category_other
+import com.adnan.memoracloud.resources.common_category_photos
+import com.adnan.memoracloud.resources.common_category_videos
 import com.adnan.memoracloud.resources.settings_backup_interval
 import com.adnan.memoracloud.resources.settings_backup_results
 import com.adnan.memoracloud.resources.settings_block_screenshots
@@ -175,6 +185,7 @@ import com.adnan.memoracloud.resources.theme_system
 import com.adnan.memoracloud.resources.trash_clear_labels
 import com.adnan.memoracloud.core.telegram.TelegramConnectionState
 import com.adnan.memoracloud.domain.model.AppTheme
+import com.adnan.memoracloud.domain.model.FileCategory
 import com.adnan.memoracloud.domain.model.LayoutDensity
 import com.adnan.memoracloud.domain.model.ViewMode
 import com.adnan.memoracloud.presentation.platform.LocalDownloadLocationConfigurable
@@ -196,6 +207,8 @@ import com.adnan.memoracloud.presentation.common.UiText
 import com.adnan.memoracloud.presentation.common.CollectSnackbarMessages
 import com.adnan.memoracloud.presentation.common.Formatters
 import com.adnan.memoracloud.presentation.components.ChoiceDialog
+import com.adnan.memoracloud.presentation.components.MultiSwitchDialog
+import com.adnan.memoracloud.presentation.components.SwitchOption
 import com.adnan.memoracloud.presentation.components.ConfirmDialog
 import com.adnan.memoracloud.presentation.components.LoadingState
 import com.adnan.memoracloud.presentation.components.liftedTopAppBarColors
@@ -421,6 +434,50 @@ private fun BackupSection(
     }
     var showIntervalDialog by remember { mutableStateOf(false) }
     var showSizeLimitDialog by remember { mutableStateOf(false) }
+    var showTypeDialog by remember { mutableStateOf(false) }
+
+    val categoryLabels = listOf(
+        FileCategory.IMAGE to Res.string.common_category_photos,
+        FileCategory.VIDEO to Res.string.common_category_videos,
+        FileCategory.AUDIO to Res.string.common_category_audio,
+        FileCategory.DOCUMENT to Res.string.common_category_documents,
+        FileCategory.ARCHIVE to Res.string.common_category_archives,
+        FileCategory.OTHER to Res.string.common_category_other
+    )
+    val enabledTypesSummary = if (prefs.backupCategories.isEmpty()) {
+        stringResource(Res.string.settings_backup_types_none)
+    } else {
+        // joinToString's transform is not inline, so the strings are resolved by map first.
+        categoryLabels
+            .filter { (category, _) -> category in prefs.backupCategories }
+            .map { (_, label) -> stringResource(label) }
+            .joinToString(" · ")
+    }
+
+    if (showTypeDialog) {
+        MultiSwitchDialog(
+            title = stringResource(Res.string.settings_backup_types_title),
+            options = categoryLabels.map { (category, label) ->
+                SwitchOption(
+                    key = category.name,
+                    label = stringResource(label),
+                    checked = category in prefs.backupCategories
+                )
+            },
+            onToggle = { key, checked ->
+                val category = FileCategory.entries.firstOrNull { it.name == key }
+                if (category != null) {
+                    val next = if (checked) {
+                        prefs.backupCategories + category
+                    } else {
+                        prefs.backupCategories - category
+                    }
+                    viewModel.update { it.copy(backupCategories = next) }
+                }
+            },
+            onDismiss = { showTypeDialog = false }
+        )
+    }
 
     if (showIntervalDialog) {
         ChoiceDialog(
@@ -510,6 +567,13 @@ private fun BackupSection(
                 onChange = { value ->
                     viewModel.update { it.copy(backupChargingOnly = value) }
                 }
+            )
+        }
+        add {
+            SettingsClickRow(
+                title = stringResource(Res.string.settings_backup_types_title),
+                subtitle = enabledTypesSummary,
+                onClick = { showTypeDialog = true }
             )
         }
         add {
@@ -663,6 +727,21 @@ private fun StorageSection(
     var showTrashDialog by remember { mutableStateOf(false) }
     var confirmFreeUpSpace by remember { mutableStateOf(false) }
     var confirmClearThumbnails by remember { mutableStateOf(false) }
+    var confirmDeleteAfterUpload by remember { mutableStateOf(false) }
+
+    if (confirmDeleteAfterUpload) {
+        ConfirmDialog(
+            title = stringResource(Res.string.settings_delete_after_upload_confirm_title),
+            message = stringResource(Res.string.settings_delete_after_upload_confirm),
+            confirmLabel = stringResource(Res.string.settings_delete_after_upload),
+            destructive = true,
+            onConfirm = {
+                confirmDeleteAfterUpload = false
+                viewModel.update { it.copy(deleteAfterUpload = true) }
+            },
+            onDismiss = { confirmDeleteAfterUpload = false }
+        )
+    }
 
     if (confirmClearThumbnails) {
         ConfirmDialog(
@@ -737,7 +816,10 @@ private fun StorageSection(
                 subtitle = stringResource(Res.string.settings_delete_after_upload_summary),
                 checked = prefs.deleteAfterUpload,
                 onChange = { value ->
-                    viewModel.update { it.copy(deleteAfterUpload = value) }
+                    // Turning it off is instant; turning it on needs an explicit confirmation,
+                    // because it is the only setting that can ever remove a file from the phone.
+                    if (value) confirmDeleteAfterUpload = true
+                    else viewModel.update { it.copy(deleteAfterUpload = false) }
                 }
             )
         }

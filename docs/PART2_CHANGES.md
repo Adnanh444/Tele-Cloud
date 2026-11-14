@@ -69,3 +69,30 @@ server, no analytics ping, and no secret in the repository.
 * **AOSP/privileged silent update** is out of scope; it needs a system signature.
 * The downloaded APK stays in the cache; *Settings → Storage* clears it, and Android may clear it
   itself under pressure — the release can simply be downloaded again.
+
+## Part 2.1 — why "it never updates", and what changed
+
+A check that found nothing and a check that **failed** used to look identical: both left the About
+row as "Check for updates" and showed nothing else. If the installed build was already the newest
+release, the updater was working perfectly and still looked broken.
+
+Changes:
+
+* `UpdateCheck` (`Available` / `UpToDate` / `Failed`) replaces the nullable result, and every failure
+  carries a short reason: `no published release found`, `GitHub answered HTTP 403`,
+  `no internet connection to GitHub`, `release 1.0.3 has no APK to install`,
+  `newest release is a draft or pre-release`, …
+* The About row now prints the outcome:
+  `Installed 1.0.2 · latest release 1.0.2`, or `Check failed: …`.
+* "Downloaded and verified" is now **restored from disk** on startup (`restoreFromDisk()`), so
+  leaving the app to grant the *install unknown apps* permission — which may get the process killed
+  — no longer loses the pending install. The row turns into the **Install** button.
+* A cached APK that is stale (its versionCode is not newer) or signed by another key is deleted on
+  startup instead of lingering in the cache.
+* Failed install attempts are logged with `SafeLog.w`, so *Share log* in settings contains evidence.
+* Timeouts raised to 20 s and `instanceFollowRedirects` enabled explicitly on both the API call and
+  the APK download.
+
+Rule of thumb when testing: **the release must be a higher version than the installed app.** The
+workflow creates a new tag per version, so testing 1.0.2 → 1.0.2 can never show an update; it has to
+be 1.0.2 → 1.0.3.

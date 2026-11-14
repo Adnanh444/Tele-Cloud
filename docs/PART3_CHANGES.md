@@ -74,3 +74,60 @@ platform-free: on desktop the local is null and the list behaves exactly as befo
 
 Nothing in the backup engine, database schema or Telegram layer was touched — the selection format
 is unchanged.
+
+---
+
+# Part 3c — "what to back up" switches, and consent before any delete
+
+## 1. Per-type switches
+
+Settings → Backup → **What to back up** (row subtitle lists the enabled kinds):
+
+```
+What to back up      Photos · Videos · Audio · Documents · Archives · Other
+```
+
+A dialog with six switches. Default: all on.
+
+* Stored as `UserPreferences.backupCategories` (DataStore key `backup_categories`, enum names), so it
+  survives restarts, restore-from-cloud and reinstall.
+* Applied **inside the scan loop, before hashing**: a switched-off kind costs no I/O and no CPU, and
+  is counted under the new `BackupDecision.SKIP_DISABLED_CATEGORY` skip reason (visible in the
+  backup scan log line).
+* Folders and type switches combine: a folder must be ticked *and* the file's kind must be on.
+* Applies to scheduled, instant and manual backups alike, because they all run the same
+  `BackupRepositoryImpl.runBackup` scan.
+* Turning everything off is allowed and honestly labelled: *"Nothing selected — backup will upload
+  no files"*.
+* Categories come from the existing `FileCategory` mapping (image / video / audio / document /
+  archive / other), so a `.zip` is "Archives", a `.pdf` is "Documents", an APK is "Other".
+
+## 2. Consent before "Delete local copy after backup"
+
+That switch is the **only** setting in the app that can ever remove a file from the phone. It was
+already off by default (`deleteAfterUpload = false`, hard early-return in
+`TransferExecutor.releaseLocalCopy`), but enabling it was one tap with no explanation.
+
+Now enabling it opens a confirmation dialog that spells out the rule:
+
+> After a file is uploaded and its hash is re-checked, the copy on this phone is deleted to free
+> space. Files marked to keep offline are never deleted, and nothing is deleted before the upload
+> succeeds. You can switch this off at any time; backups already in Telegram are not affected.
+
+Turning it **off** stays instant. The deletion path is unchanged: verified upload + matching SHA-256
++ size match + not "keep offline", otherwise the file is left alone.
+
+## Files touched
+
+| File | Change |
+| --- | --- |
+| `shared/…/domain/model/UserPreferences.kt` | `backupCategories` (default: everything) |
+| `shared/…/domain/model/BackupDecision.kt` | `SKIP_DISABLED_CATEGORY` |
+| `shared/…/preferences/PreferenceKeys.kt` | `backup_categories` key |
+| `shared/…/repository/SettingsRepositoryImpl.kt` | read/write the set, tolerating unknown names |
+| `shared/…/repository/BackupRepositoryImpl.kt` | category filter before hashing |
+| `ui/…/components/MultiSwitchDialog.kt` | new — reusable multi-toggle dialog |
+| `ui/…/settings/SettingsSectionScreen.kt` | "What to back up" row + dialog, delete-after-upload consent |
+| `ui/…/composeResources/values/strings.xml` | 4 strings (reusing the existing category labels) |
+
+No database migration is involved: preferences are DataStore, and the schema is untouched.

@@ -129,6 +129,16 @@ class BackupRepositoryImpl(
             }
             val record = backupDao.recordByPath(candidate.absolutePath, activeChatId)
             val mime = MimeTypes.fromFileName(candidate.name)
+
+            // The user's "what to back up" switches are applied before hashing, so a switched-off
+            // kind costs nothing.
+            if (FileCategory.fromMimeType(mime) !in prefs.backupCategories) {
+                skipped++
+                reasons[BackupDecision.SKIP_DISABLED_CATEGORY] =
+                    (reasons[BackupDecision.SKIP_DISABLED_CATEGORY] ?: 0) + 1
+                continue
+            }
+
             val decision = decideBackupAction(
                 candidate = ExclusionCandidate(
                     absolutePath = candidate.absolutePath,

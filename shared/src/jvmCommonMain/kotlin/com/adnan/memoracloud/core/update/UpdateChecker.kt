@@ -1,11 +1,14 @@
 package com.adnan.memoracloud.core.update
 
 import com.adnan.memoracloud.core.common.SafeLog
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.net.URL
+import java.net.UnknownHostException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * An anonymous read of public endpoints, so a check reveals no more than visiting the releases
@@ -17,49 +20,74 @@ class UpdateChecker(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun newerRelease(): AppRelease? = withContext(Dispatchers.IO) {
-        val payload = runCatching { fetch(RELEASES_URL) }
-            .onFailure { SafeLog.w(TAG, "Update check failed", it) }
-            .getOrNull()
-            ?: return@withContext null
+    /** Convenience for the background worker, which only cares whether there is something to show. */
+    suspend fun newerRelease(): AppRelease? = when (val result = check()) {
+        is UpdateCheck.Available -> result.release
+        else -> null
+    }
+
+    suspend fun check(): UpdateCheck = withContext(Dispatchers.IO) {
+        val payload = try {
+            fetch(RELEASES_URL)
+        } catch (error: HttpStatusException) {
+            SafeLog.w(TAG, "Update check HTTP ${error.code}")
+            return@withContext UpdateCheck.Failed(
+                if (error.code == HttpURLConnection.HTTP_NOT_FOUND) {
+                    "no published release found"
+                } else {
+                    "GitHub answered HTTP ${error.code}"
+                }
+            )
+        } catch (error: Throwable) {
+            SafeLog.w(TAG, "Update check failed", error)
+            return@withContext UpdateCheck.Failed(networkReason(error))
+        }
 
         val release = runCatching {
             json.decodeFromString(GitHubRelease.serializer(), payload)
-        }.getOrNull() ?: return@withContext null
+        }.getOrElse {
+            SafeLog.w(TAG, "Release JSON unreadable", it)
+            return@withContext UpdateCheck.Failed("release data could not be read")
+        }
 
-        if (release.draft || release.preRelease) return@withContext null
+        if (release.draft || release.preRelease) {
+            return@withContext UpdateCheck.Failed("newest release is a draft or pre-release")
+        }
+
         val latest = release.tag.removePrefix("v").trim()
-        if (!isNewer(latest, currentVersion)) return@withContext null
+        if (!isNewer(latest, currentVersion)) {
+            return@withContext UpdateCheck.UpToDate(currentVersion, latest)
+        }
 
-        // update.json is optional: without it the app still offers the download, just without a
-        // published hash to compare against (the signature check still runs).
+        // update.json is optional: without it the download is still offered, just without a
+        // published hash (the signature check still runs before anything is installed).
         val manifest = release.assets
             .firstOrNull { it.name == MANIFEST_NAME }
             ?.let { asset ->
                 runCatching {
-                    json.decodeFromString(
-                        ReleaseManifest.serializer(),
-                        fetch(asset.downloadUrl)
-                    )
+                    json.decodeFromString(ReleaseManifest.serializer(), fetch(asset.downloadUrl))
                 }.onFailure { SafeLog.w(TAG, "update.json unreadable", it) }.getOrNull()
             }
 
         val apkAsset = manifest?.apk
             ?.let { wanted -> release.assets.firstOrNull { it.name == wanted } }
             ?: release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
+            ?: return@withContext UpdateCheck.Failed("release $latest has no APK to install")
 
-        AppRelease(
-            version = latest,
-            notes = release.body.orEmpty().trim(),
-            pageUrl = release.pageUrl,
-            apkUrl = apkAsset?.downloadUrl,
-            apkName = apkAsset?.name,
-            sha256 = manifest?.sha256
-                ?.trim()
-                ?.lowercase()
-                ?.takeIf { it.length == SHA256_HEX_LENGTH },
-            versionCode = manifest?.versionCode,
-            sizeBytes = apkAsset?.size ?: 0L
+        UpdateCheck.Available(
+            AppRelease(
+                version = latest,
+                notes = release.body.orEmpty().trim(),
+                pageUrl = release.pageUrl,
+                apkUrl = apkAsset.downloadUrl,
+                apkName = apkAsset.name,
+                sha256 = manifest?.sha256
+                    ?.trim()
+                    ?.lowercase()
+                    ?.takeIf { it.length == SHA256_HEX_LENGTH },
+                versionCode = manifest?.versionCode,
+                sizeBytes = apkAsset.size
+            )
         )
     }
 
@@ -68,17 +96,25 @@ class UpdateChecker(
             requestMethod = "GET"
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
+            instanceFollowRedirects = true
             setRequestProperty("Accept", "application/vnd.github+json, application/json")
             setRequestProperty("User-Agent", USER_AGENT)
         }
         return try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                error("HTTP ${connection.responseCode}")
-            }
+            val code = connection.responseCode
+            if (code != HttpURLConnection.HTTP_OK) throw HttpStatusException(code)
             connection.inputStream.bufferedReader().use { it.readText() }
         } finally {
             connection.disconnect()
         }
+    }
+
+    /** Short enough for a settings row, specific enough to act on. */
+    private fun networkReason(error: Throwable): String = when (error) {
+        is UnknownHostException -> "no internet connection to GitHub"
+        is SocketTimeoutException -> "GitHub took too long to answer"
+        is IOException -> error.message ?: "network problem"
+        else -> error.message ?: error::class.simpleName ?: "unknown error"
     }
 
     /** Compares dotted numbers so 1.10 counts as newer than 1.9. */
@@ -97,6 +133,8 @@ class UpdateChecker(
     private fun String.numbers(): List<Int> = split('.', '-', '_')
         .mapNotNull { part -> part.takeWhile(Char::isDigit).toIntOrNull() }
 
+    private class HttpStatusException(val code: Int) : IOException("HTTP $code")
+
     private companion object {
         const val TAG = "UpdateChecker"
         const val RELEASES_URL =
@@ -104,6 +142,6 @@ class UpdateChecker(
         const val USER_AGENT = "MemoraCloud"
         const val MANIFEST_NAME = "update.json"
         const val SHA256_HEX_LENGTH = 64
-        const val TIMEOUT_MS = 15_000
+        const val TIMEOUT_MS = 20_000
     }
 }

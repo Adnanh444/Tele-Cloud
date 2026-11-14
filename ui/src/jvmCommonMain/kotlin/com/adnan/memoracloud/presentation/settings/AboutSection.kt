@@ -116,17 +116,38 @@ fun AboutSection(state: SettingsUiState, viewModel: SettingsViewModel) {
             SettingsClickRow(
                 title = stringResource(Res.string.about_check_updates),
                 icon = Icons.Filled.Update,
-                subtitle = when (val current = updateState) {
-                    is UpdateState.Available -> stringResource(
-                        Res.string.about_update_ready,
-                        current.release.version
+                subtitle = when {
+                    // A downloaded, verified APK outranks everything else: the row becomes the
+                    // Install button, even if the check result was forgotten.
+                    installState is UpdateInstallState.ReadyToInstall ->
+                        stringResource(Res.string.about_update_ready_install)
+
+                    installState is UpdateInstallState.Downloading -> stringResource(
+                        Res.string.about_update_downloading,
+                        ((installState as UpdateInstallState.Downloading).fraction * 100).toInt()
                     )
 
-                    UpdateState.Checking -> stringResource(Res.string.about_checking)
-                    UpdateState.Idle -> stringResource(Res.string.about_check_updates_summary)
+                    installState is UpdateInstallState.Verifying ->
+                        stringResource(Res.string.about_update_verifying)
+
+                    else -> when (val current = updateState) {
+                        is UpdateState.Available -> stringResource(
+                            Res.string.about_update_ready,
+                            current.release.version
+                        )
+
+                        is UpdateState.Message -> current.text
+                        UpdateState.Checking -> stringResource(Res.string.about_checking)
+                        UpdateState.Idle -> stringResource(Res.string.about_check_updates_summary)
+                    }
                 },
-                onClick = { if (!checking) viewModel.checkForUpdates() },
-                trailing = if (checking) {
+                onClick = {
+                    when {
+                        installState is UpdateInstallState.ReadyToInstall -> installer?.install()
+                        !checking -> viewModel.checkForUpdates()
+                    }
+                },
+                trailing = if (checking || installState is UpdateInstallState.Downloading) {
                     { LoadingIndicator(modifier = Modifier.size(24.dp)) }
                 } else null
             )

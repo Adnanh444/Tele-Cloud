@@ -13,6 +13,9 @@ data class UserPreferences(
     val backupIntervalHours: Int = 24,
     val backupMaxFileSizeMb: Int = 0,
 
+    /** Which kinds of files the backup may upload. Everything, until the user narrows it. */
+    val backupCategories: Set<FileCategory> = FileCategory.entries.toSet(),
+
     val maxCacheSizeMb: Int = 1024,
     val trashAutoClearDays: Int = 30,
 

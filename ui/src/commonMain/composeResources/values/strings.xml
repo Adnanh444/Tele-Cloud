@@ -645,6 +645,10 @@
     <string name="settings_add_another_folder">Add another folder</string>
     <string name="settings_automatic_backup">Automatic backup</string>
     <string name="settings_back_new_media_instantly">Back up new media instantly</string>
+    <string name="settings_backup_types_title">What to back up</string>
+    <string name="settings_backup_types_none">Nothing selected — backup will upload no files</string>
+    <string name="settings_delete_after_upload_confirm_title">Delete photos from this phone after upload?</string>
+    <string name="settings_delete_after_upload_confirm">After a file is uploaded and its hash is re-checked, the copy on this phone is deleted to free space. Files marked to keep offline are never deleted, and nothing is deleted before the upload succeeds.\n\nYou can switch this off at any time; backups already in Telegram are not affected.</string>
     <string name="settings_backup_folders_title">Backup folders</string>
     <string name="settings_backup_interval">Backup interval</string>
     <string name="settings_folder_unreadable">That folder cannot be read directly</string>
