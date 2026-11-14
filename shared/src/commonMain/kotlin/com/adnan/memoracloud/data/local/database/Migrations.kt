@@ -1,19 +1,13 @@
-package com.adnan.memoracloud.data.local.database
-
-import androidx.room.migration.Migration
-import androidx.sqlite.SQLiteConnection
-import androidx.sqlite.execSQL
-
 /**
- * On-device photo tags (Part 3b). One row per image, no foreign key: deleting a file row should not
- * cascade here mid-migration, and the table is small enough that a manual cleanup is cheaper than
- * the risk.
+ * Version 19 was the schema 1.0.6 shipped, and it still contained the on-device AI tables
+ * (`photo_labels` from the photo tagger, `faces`/`people`/`face_scans` from face groups).
+ * 1.0.8 removed those entities **without bumping the version number**, so an upgraded install kept a
+ * database at version 19 whose stored identity hash no longer matched the new schema. Room runs no
+ * migration when the version is unchanged and only validates, so every launch died with
+ * "Room cannot verify the data integrity". Dropping the tables is therefore a real version step:
+ * 19 -> 20.
  */
-/**
- * The on-device AI experiments (photo tags in 1.0.6, face groups in the unpublished 1.0.7) are gone,
- * so their tables are dropped: an upgraded install carries no dead data.
- */
-val MIGRATION_18_19 = object : Migration(18, 19) {
+val MIGRATION_19_20 = object : Migration(19, 20) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL("DROP TABLE IF EXISTS `photo_labels`")
         connection.execSQL("DROP TABLE IF EXISTS `faces`")
@@ -22,7 +16,16 @@ val MIGRATION_18_19 = object : Migration(18, 19) {
     }
 }
 
-/** Upgrades from 17 straight to 19 are covered by running both steps. */
+/**
+ * Older installs have to pass through 19 as well. Their intermediate schema is never validated -
+ * only the final one is - so running the same drops twice is harmless (`IF EXISTS`).
+ */
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(connection: SQLiteConnection) {
+        // 1.0.6 created the AI tables here; 18 -> 19 -> 20 is covered by the drops below.
+    }
+}
+
 val MIGRATION_17_19 = object : Migration(17, 19) {
     override fun migrate(connection: SQLiteConnection) {
         MIGRATION_18_19.migrate(connection)

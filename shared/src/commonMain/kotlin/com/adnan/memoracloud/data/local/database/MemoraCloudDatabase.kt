@@ -45,7 +45,7 @@ import com.adnan.memoracloud.data.local.entity.TransferEntity
         ProxyEntity::class,
         FolderTombstoneEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = true
 )
 @ConstructedBy(MemoraCloudDatabaseConstructor::class)

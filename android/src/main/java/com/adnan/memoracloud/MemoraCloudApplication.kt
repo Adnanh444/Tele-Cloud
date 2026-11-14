@@ -72,6 +72,13 @@ class MemoraCloudApplication : Application(), SingletonImageLoader.Factory {
             workManagerFactory()
             modules(appModules)
         }
+        // Leftover jobs from removed features: drop them for good now that WorkManager is running.
+        runCatching {
+            val workManager = androidx.work.WorkManager.getInstance(this)
+            workManager.cancelUniqueWork("photo-labels")
+            workManager.cancelUniqueWork("face-scan")
+        }.onFailure { SafeLog.w("Startup", "Could not clear legacy work", it) }
+
         appNotifications.createChannels()
         mediaStoreWatcher.start()
         proxyFailover.start(applicationScope)

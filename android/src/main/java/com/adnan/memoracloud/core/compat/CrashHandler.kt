@@ -26,12 +26,38 @@ object CrashHandler {
     /** Also written to Downloads/MemoraCloud so it is reachable without the app. */
     private const val PUBLIC_FILE = "memora-crash.txt"
 
+    /** The local index. Rebuilt from Telegram by "Rebuild index". */
+    private const val DB = "memoracloud.db"
+
     fun install(context: Context) {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             runCatching { write(context.applicationContext, thread, error) }
             previous?.uncaughtException(thread, error)
                 ?: Runtime.getRuntime().halt(1)
+        }
+    }
+
+    private fun isSchemaFailure(error: Throwable): Boolean {
+        var cause: Throwable? = error
+        while (cause != null) {
+            val message = cause.message.orEmpty()
+            if (message.contains("Room cannot verify the data integrity") ||
+                (message.contains("A migration from") && message.contains("was required but not found"))
+            ) {
+                return true
+            }
+            cause = cause.cause
+        }
+        return false
+    }
+
+    private fun resetIndex(context: Context) {
+        runCatching {
+            val base = context.getDatabasePath(DB)
+            listOf(base, File("${base.path}-wal"), File("${base.path}-shm"), File("${base.path}-journal"))
+                .forEach { if (it.exists()) it.delete() }
+            SafeLog.w("Crash", "Reset the local index after a schema failure")
         }
     }
 
@@ -56,6 +82,17 @@ object CrashHandler {
     }
 
     private fun write(context: Context, thread: Thread, error: Throwable) {
+        // A database Room refuses to open fails on *every* launch, so no code fix can reach the
+        // user. The index is fully rebuildable from Telegram, so it is reset here instead of
+        // leaving the app permanently unusable.
+        val schemaFailure = isSchemaFailure(error)
+        val note = if (schemaFailure) {
+            resetIndex(context)
+            "\nRECOVERED: the local index was reset. Reopen the app and run \"Rebuild index\".\n"
+        } else {
+            ""
+        }
+
         val text = buildString {
             append("Memora Cloud crash\n")
             append(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())).append('\n')
@@ -65,6 +102,7 @@ object CrashHandler {
                 .append(" / Android ").append(android.os.Build.VERSION.RELEASE).append('\n')
             append('\n')
             append(error.stackTraceToString())
+            append(note)
         }
         val dir = File(context.filesDir, DIR).apply { mkdirs() }
         runCatching { File(dir, FILE).writeText(text) }

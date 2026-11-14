@@ -1,45 +1,62 @@
-# What crashed 1.0.8
+# The 1.0.8 launch crash — confirmed cause and fix
 
-Reported: after installing 1.0.8 over 1.0.6, the app would not open.
+Reported: after updating from 1.0.6 to 1.0.8 the app closed immediately, and 1.0.9 did the same.
 
-## Most likely cause
+## The crash, from `Downloads/MemoraCloud/memora-crash.txt`
 
-1.0.6 shipped an experimental photo tagger and enqueued it at every start:
-
-```kotlin
-if (prefs.aiLabelsEnabled) photoTagScheduler.enqueue()   // unique work "photo-labels"
+```
+java.lang.IllegalStateException: Room cannot verify the data integrity. Looks like you've changed
+schema but forgot to update the version number. You can simply fix this by increasing the version
+number. Expected identity hash: f1470a9f712bf49f5f13ca835976dab3,
+found: 6a36037306ccfd53f425aa7e340b179c
 ```
 
-WorkManager keeps its own database of unfinished jobs. 1.0.8 deleted `PhotoLabelWorker` entirely,
-but any job still unfinished at update time stayed in WorkManager's database. On start-up:
+Room says exactly what was wrong, and it was right: **1.0.8 removed database tables without bumping
+the database version number.**
 
-1. `androidx.startup` initialises WorkManager — **before** `Application.onCreate`.
-2. WorkManager re-creates each unfinished job by **class name**.
-3. `com.adnan.memoracloud.core.ai.PhotoLabelWorker` no longer exists → `ClassNotFoundException`.
-4. The exception happens inside provider initialisation, so nothing in the app can catch it and the
-   process dies immediately — exactly "app crashed, not opening".
+* 1.0.6 shipped database **version 19**, whose schema contained the AI tables `photo_labels`
+  (photo tagger) and `faces`, `people`, `face_scans` (face groups).
+* 1.0.8 deleted those entities but left `version = 19`.
+* On an upgraded install the file on disk is still version 19, so Room runs **no migration** — it
+  only validates the stored schema against the current one, and the identity hash cannot match.
+* The exception is thrown while opening the database, on a background dispatcher, every launch.
 
-## Fix in 1.0.9
+A fresh install was never affected, which is why the build looked fine.
 
-`core/compat/LegacyWorkers.kt` reintroduces both old class names as do-nothing `Worker`s returning
-`Result.success()`, registered in Koin as `legacyWorkersModule`. The leftover job now runs once, does
-nothing, and is pruned. They can be deleted several versions later.
+## Fix
 
-## Diagnostics added, because a phone has no logcat
+Version **20**, with a real migration step:
 
-`CrashHandler` (installed from `attachBaseContext`, which runs before providers) writes the next
-uncaught exception to:
+```kotlin
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS `photo_labels`")
+        connection.execSQL("DROP TABLE IF EXISTS `faces`")
+        connection.execSQL("DROP TABLE IF EXISTS `people`")
+        connection.execSQL("DROP TABLE IF EXISTS `face_scans`")
+    }
+}
+```
 
-* `files/crash/last.txt` — shown in a dialog on the next successful start (selectable, so it can be
-  copied).
-* `Downloads/MemoraCloud/memora-crash.txt` — openable from any file manager **even if the app never
-  starts again**.
+`MIGRATION_17_19` and `MIGRATION_18_19` stay so older installs still have a path
+(17 → 19 → 20, 18 → 19 → 20); Room validates only the final schema, so the intermediate no-op is
+harmless. **The file index, settings and login survive** — no rebuild needed.
 
-## If 1.0.9 still refuses to open
+## Why 1.0.8/1.0.9 diagnostics took this long
 
-1. Look in `Downloads/MemoraCloud/memora-crash.txt` and read the first `Caused by:` line.
-2. The other candidate is the Room migration (v18 → v19 drops the AI tables) failing schema
-   validation. The message would name a table.
-3. Last resort that keeps the backup safe: Android Settings → Apps → Memora Cloud → Storage →
-   Clear storage. The index and login are rebuilt from Telegram afterwards; the photos are not
-   touched.
+The original suspicion was WorkManager re-creating a job for the deleted `PhotoLabelWorker`. That was
+wrong, and the empty stand-ins (now in their original packages, with `-keepnames`) are only belt and
+braces. What settled it was writing the stack trace to `Downloads/MemoraCloud/memora-crash.txt` from
+a content provider declared first in the manifest, so even a crash during start-up is recorded.
+
+## Last-resort net
+
+`CrashHandler` now recognises this exact failure. If *any* future build ships a schema change without
+a version bump, it deletes `memoracloud.db` and notes it in the crash file instead of bricking the
+app forever; the next launch opens with an empty index, rebuilt from Telegram by "Rebuild index".
+
+## Standing rule
+
+Any change to `@Entity` classes requires `version = N + 1` **and** a migration in the same commit.
+`Migrations.kt` carries a comment saying so; a schema change that only drops tables is still a
+version step.

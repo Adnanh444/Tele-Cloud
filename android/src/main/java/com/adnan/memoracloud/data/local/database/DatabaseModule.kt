@@ -25,7 +25,8 @@ val databaseModule = module {
                 MIGRATION_15_16,
                 MIGRATION_16_17,
                 MIGRATION_17_19,
-                MIGRATION_18_19
+                MIGRATION_18_19,
+                MIGRATION_19_20
             )
             .build()
     }

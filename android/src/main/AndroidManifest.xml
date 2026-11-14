@@ -80,6 +80,14 @@
             </intent-filter>
         </receiver>
 
+        <!-- Declared before everything else: providers are created before Application.onCreate,
+             so the crash handler installed here also catches a crash inside WorkManager's own
+             start-up provider. -->
+        <provider
+            android:name=".core.compat.CrashLogProvider"
+            android:authorities="${applicationId}.crashlog"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

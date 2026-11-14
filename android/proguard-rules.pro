@@ -23,3 +23,11 @@
 -keepclasseswithmembers class com.adnan.memoracloud.data.remote.telegram.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# WorkManager stores a worker's class name in its database and re-creates it by that name on the
+# next launch. Jobs queued by 1.0.6 reference classes whose features were removed, so the names must
+# survive obfuscation for the empty stand-ins to be found.
+-keepnames class com.adnan.memoracloud.core.ai.PhotoLabelWorker
+-keepnames class com.adnan.memoracloud.core.people.FaceScanWorker
+-keep class com.adnan.memoracloud.core.ai.PhotoLabelWorker { <init>(...); }
+-keep class com.adnan.memoracloud.core.people.FaceScanWorker { <init>(...); }
