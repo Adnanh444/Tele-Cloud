@@ -12,11 +12,9 @@ jobs:
       - run: |
           set -eu
           Z=$(ls *.zip 2>/dev/null | head -1) || true
-          [ -n "$Z" ] || { echo "FAILED: put the source .zip at the repo root"; exit 1; }
-          echo "found $Z"
+          [ -n "$Z" ] || { echo "put the source .zip at the repo root"; exit 1; }
           unzip -q -o "$Z" -d /tmp/s
           S=$(dirname "$(find /tmp/s -maxdepth 2 -name android -type d | head -1)")
-          echo "source: $S"
           rsync -a --delete --exclude .git --exclude .github "$S"/ ./
           chmod +x gradlew || true
           git config user.name actions
@@ -24,4 +22,3 @@ jobs:
           git add -A
           git commit -m "sync Memora Cloud source" || echo "nothing to commit"
           git push origin "HEAD:$GITHUB_REF_NAME"
-          echo "DONE - repo mirrors the archive"
