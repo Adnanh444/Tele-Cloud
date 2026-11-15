@@ -9,8 +9,8 @@ This product is a modified fork of TeleDrive.
   Licensed under the Apache License, Version 2.0
 
 Modifications for Memora Cloud include, but are not limited to: application identity and package
-rename, new launcher and notification artwork, Android-only build and release automation, and
-(subject to future parts) an in-app updater and on-device photo intelligence.
+rename, new launcher and notification artwork, Android-only build and release automation, an in-app
+updater with signature verification, a restore workflow, a new database schema and its migrations.
 
 Both the original work and these modifications are licensed under the Apache License, Version 2.0.
 A copy of that license is included in the LICENSE file. You may obtain a copy at

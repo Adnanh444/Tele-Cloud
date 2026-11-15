@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Update
@@ -35,8 +34,6 @@ import com.adnan.memoracloud.resources.about_check_updates_summary
 import com.adnan.memoracloud.resources.about_checking
 import com.adnan.memoracloud.resources.about_developer
 import com.adnan.memoracloud.resources.about_license
-import com.adnan.memoracloud.resources.about_upstream
-import com.adnan.memoracloud.resources.about_upstream_summary
 import com.adnan.memoracloud.resources.about_section_project
 import com.adnan.memoracloud.resources.about_section_updates
 import com.adnan.memoracloud.resources.about_source_code
@@ -176,14 +173,6 @@ fun AboutSection(state: SettingsUiState, viewModel: SettingsViewModel) {
                 icon = Icons.Filled.Code,
                 subtitle = stringResource(Res.string.about_source_code_summary),
                 onClick = { urlOpener.open(AppLinks.REPOSITORY) }
-            )
-        }
-        add {
-            SettingsClickRow(
-                title = stringResource(Res.string.about_upstream),
-                icon = Icons.Filled.Info,
-                subtitle = stringResource(Res.string.about_upstream_summary),
-                onClick = { urlOpener.open(AppLinks.UPSTREAM) }
             )
         }
     }

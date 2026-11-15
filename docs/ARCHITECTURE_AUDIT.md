@@ -1,10 +1,10 @@
-# Memora Cloud architecture audit (based on TeleDrive)
+# Memora Cloud architecture audit
 
 This is the inspection report produced **before** any modification, plus the decisions taken for
 Memora Cloud. It describes the real code in this repository, not an idealised plan.
 
-Upstream: <https://github.com/Mahmud0808/TeleDrive> (Apache License 2.0), inspected at commit
-`daf2662` (branch `master`), 691 Kotlin files / ~55 700 lines.
+Starting point: the open-source baseline recorded in `NOTICE` (Apache License 2.0), at 691 Kotlin
+files / ~55 700 lines. Attribution for that baseline lives in `NOTICE` only.
 
 ---
 

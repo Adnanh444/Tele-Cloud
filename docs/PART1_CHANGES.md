@@ -1,7 +1,7 @@
 # Part 1 — Identity, build system, release plumbing
 
-Status: **implemented in the source tree**. Part 1 does not add features; it turns upstream
-TeleDrive into *your* app, with a build and release pipeline you can drive from a phone.
+Status: **implemented in the source tree**. Part 1 does not add features; it turns the open-source
+baseline into *this* app, with a build and release pipeline you can drive from a phone.
 
 Nothing in Part 1 was compiled here — see "What was and was not verified" at the end.
 

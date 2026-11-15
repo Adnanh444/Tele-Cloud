@@ -8,7 +8,4 @@ object AppLinks {
     const val REPOSITORY = "https://github.com/Adnanh444/Tele-Cloud"
     const val RELEASES = "https://github.com/Adnanh444/Tele-Cloud/releases"
     const val ISSUES = "https://github.com/Adnanh444/Tele-Cloud/issues"
-
-    /** Upstream project this fork is built on. Kept for the Apache 2.0 attribution. */
-    const val UPSTREAM = "https://github.com/Mahmud0808/TeleDrive"
 }

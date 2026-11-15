@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.0.12 — your app, your name
+
+* **About screen no longer credits or links the upstream project.** The "Upstream project" row is
+  gone, and the licence line now reads simply "Apache License 2.0". Legal attribution is kept in the
+  `NOTICE` file, where the licence requires it.
+* README rewritten as a user guide with screenshots, install steps, restore instructions,
+  troubleshooting and a table of where data lives.
+* Changelog now describes every release a user can actually install.
+
+## 1.0.11 — the app opens again
+
+* **Fixed a launch crash that made 1.0.8 and 1.0.9 unusable on upgraded installs.** 1.0.8 removed
+  four database tables without increasing the database version, so Room refused to open the file
+  ("cannot verify the data integrity"). The database is now version 20 with a real migration from
+  19; the index, settings and login survive the update.
+* Crash reporting: an uncaught exception is written to `files/crash/last.txt` and to
+  `Downloads/MemoraCloud/memora-crash.txt`, and shown in a dialog on the next start.
+* If a future release ever ships a schema change without a migration again, the app resets its
+  index once instead of becoming permanently unable to start.
+
+## 1.0.8 — restore, and much less
+
+* **Restore from Telegram** (Settings → Account): choose a scope, see how many files that is and how
+  many are missing from this device, then queue the download. Skips files already on the device by
+  default. Restored files go to `Downloads/MemoraCloud`.
+* Removed the on-device photo tagging and face grouping experiments, their tables, model and
+  dependencies.
+* Removed text/tag search; search is by file name.
+* Update checker no longer fails with HTTP 403: it reads the release metadata from the release page
+  instead of the rate-limited API.
+* English-only build: unused translations removed.
+
 ## 1.0.0 — Part 1
 
 Identity and delivery groundwork, no new end-user features.

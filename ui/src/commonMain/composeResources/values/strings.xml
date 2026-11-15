@@ -893,10 +893,8 @@
     <string name="about_check_updates_summary">Compares this build with the latest release</string>
     <string name="about_checking">Checking…</string>
     <string name="about_developer">Developed by Adnan</string>
-    <string name="about_license">Apache License 2.0 · based on TeleDrive, with attribution</string>
+    <string name="about_license">Apache License 2.0</string>
     <string name="about_no_update">You are on the latest version</string>
-    <string name="about_upstream">Upstream project</string>
-    <string name="about_upstream_summary">TeleDrive, the open-source app this build is based on</string>
     <string name="about_section_project">Project</string>
     <string name="about_section_updates">Updates</string>
     <string name="about_source_code">Source code</string>
