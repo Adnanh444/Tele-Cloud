@@ -33,6 +33,7 @@ import com.adnan.memoracloud.presentation.common.UiText
 import com.adnan.memoracloud.presentation.common.toUiText
 import com.adnan.memoracloud.presentation.files.ShareRequest
 import com.adnan.memoracloud.resources.Res
+import com.adnan.memoracloud.resources.backup_cleanup_done
 import com.adnan.memoracloud.resources.about_no_update
 import com.adnan.memoracloud.resources.files_removed_local_copies
 import com.adnan.memoracloud.resources.message_backing_up_new_folder
@@ -83,6 +84,7 @@ class SettingsViewModel(
     private val updateChecker: UpdateChecker,
     private val restoreFiles: RestoreFilesUseCase,
     private val debugLogRecorder: DebugLogRecorder,
+    private val sidecarCleanup: com.adnan.memoracloud.core.transfer.SidecarCleanup,
 ) : ViewModel() {
 
     private val user = MutableStateFlow<TelegramUser?>(null)
@@ -99,6 +101,36 @@ class SettingsViewModel(
     private val _restorePlan = MutableStateFlow<RestorePlan?>(null)
     /** Null while the counts are being read from the index. */
     val restorePlan: StateFlow<RestorePlan?> = _restorePlan.asStateFlow()
+
+    private val _sidecarCount = MutableStateFlow<Int?>(null)
+    /** How many Takeout sidecars are in the index; null until scanned. */
+    val sidecarCount: StateFlow<Int?> = _sidecarCount.asStateFlow()
+
+    private val _sidecarWorking = MutableStateFlow(false)
+    val sidecarWorking: StateFlow<Boolean> = _sidecarWorking.asStateFlow()
+
+    fun scanSidecars() {
+        if (_sidecarWorking.value) return
+        viewModelScope.launch {
+            _sidecarWorking.value = true
+            _sidecarCount.value = runCatching { sidecarCleanup.find().size }.getOrNull()
+            _sidecarWorking.value = false
+        }
+    }
+
+    /** Deletes every Takeout sidecar from the index and from Telegram. Not reversible. */
+    fun deleteSidecars() {
+        if (_sidecarWorking.value) return
+        viewModelScope.launch {
+            _sidecarWorking.value = true
+            val removed = runCatching {
+                sidecarCleanup.delete(sidecarCleanup.find().map { it.id })
+            }.getOrDefault(0)
+            _sidecarCount.value = 0
+            _sidecarWorking.value = false
+            _messages.tryEmit(UiText.Resource(Res.string.backup_cleanup_done, removed))
+        }
+    }
 
     private val _keyBackupWorking = MutableStateFlow(false)
     val keyBackupWorking: StateFlow<Boolean> = _keyBackupWorking.asStateFlow()

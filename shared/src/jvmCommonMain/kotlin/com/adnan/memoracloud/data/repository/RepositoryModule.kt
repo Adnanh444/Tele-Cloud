@@ -20,6 +20,7 @@ import org.koin.dsl.module
 
 val repositoryModule = module {
     singleOf(::ManifestCodec)
+    singleOf(::com.adnan.memoracloud.core.transfer.SidecarCleanup)
     singleOf(::ActiveChannel)
     singleOf(::ChannelOwnership)
     singleOf(::FolderOwnershipRepair)

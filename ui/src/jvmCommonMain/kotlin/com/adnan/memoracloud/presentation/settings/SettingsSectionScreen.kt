@@ -82,6 +82,14 @@ import com.adnan.memoracloud.resources.settings_backup_types_none
 import com.adnan.memoracloud.resources.settings_backup_types_title
 import com.adnan.memoracloud.resources.settings_delete_after_upload_confirm
 import com.adnan.memoracloud.resources.settings_delete_after_upload_confirm_title
+import com.adnan.memoracloud.resources.backup_cleanup_confirm_body
+import com.adnan.memoracloud.resources.backup_cleanup_confirm_title
+import com.adnan.memoracloud.resources.backup_cleanup_delete
+import com.adnan.memoracloud.resources.backup_cleanup_found
+import com.adnan.memoracloud.resources.backup_cleanup_none
+import com.adnan.memoracloud.resources.backup_cleanup_sidecars
+import com.adnan.memoracloud.resources.backup_cleanup_sidecars_summary
+import com.adnan.memoracloud.resources.backup_cleanup_working
 import com.adnan.memoracloud.resources.common_category_archives
 import com.adnan.memoracloud.resources.common_category_audio
 import com.adnan.memoracloud.resources.common_category_documents
@@ -463,6 +471,9 @@ private fun BackupSection(
     var showIntervalDialog by remember { mutableStateOf(false) }
     var showSizeLimitDialog by remember { mutableStateOf(false) }
     var showTypeDialog by remember { mutableStateOf(false) }
+    val sidecarCount by viewModel.sidecarCount.collectAsStateWithLifecycle()
+    val sidecarWorking by viewModel.sidecarWorking.collectAsStateWithLifecycle()
+    var confirmSidecarDelete by remember { mutableStateOf(false) }
 
     val categoryLabels = listOf(
         FileCategory.IMAGE to Res.string.common_category_photos,
@@ -543,6 +554,39 @@ private fun BackupSection(
                 viewModel.removeBackupFolder(folder)
             },
             onDismiss = { folderToRemove = null }
+        )
+    }
+
+    SettingsGroup {
+        add {
+            SettingsClickRow(
+                title = stringResource(Res.string.backup_cleanup_sidecars),
+                subtitle = when {
+                    sidecarWorking -> stringResource(Res.string.backup_cleanup_working)
+                    sidecarCount == null ->
+                        stringResource(Res.string.backup_cleanup_sidecars_summary)
+                    (sidecarCount ?: 0) == 0 -> stringResource(Res.string.backup_cleanup_none)
+                    else -> stringResource(Res.string.backup_cleanup_found, sidecarCount ?: 0)
+                },
+                onClick = {
+                    if ((sidecarCount ?: 0) > 0) confirmSidecarDelete = true
+                    else viewModel.scanSidecars()
+                }
+            )
+        }
+    }
+
+    if (confirmSidecarDelete) {
+        ConfirmDialog(
+            title = stringResource(Res.string.backup_cleanup_confirm_title),
+            message = stringResource(Res.string.backup_cleanup_confirm_body, sidecarCount ?: 0),
+            confirmLabel = stringResource(Res.string.backup_cleanup_delete),
+            destructive = true,
+            onConfirm = {
+                confirmSidecarDelete = false
+                viewModel.deleteSidecars()
+            },
+            onDismiss = { confirmSidecarDelete = false }
         )
     }
 

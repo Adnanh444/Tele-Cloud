@@ -26,6 +26,7 @@ Last updated: Part 4 (restore wizard; AI removed).
 | Credentials stored securely | ✅ | `KeystoreManager`, encrypted `api_hash`, TDLib session in app-private storage |
 | Re-detect the channel after a reinstall | ✅ | title search + `#memoracloud-storage` marker adoption |
 | Recovery with same account + channel | ✅ | cloud manifest + index snapshot rebuild |
+| Google Takeout sidecar cleanup (count + bulk delete) | ✅ | `SidecarCleanup`, Settings > Backup |
 | Never delete backup files during normal sync | ✅ | deletion is explicit and goes through Trash → `PendingDeleteEntity` |
 | No separate Memora login | ✅ | Telegram credentials only |
 

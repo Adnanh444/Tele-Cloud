@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.13 — clean up Google Takeout leftovers
+
+* **New: Settings → Backup → "Clean up Google Takeout sidecars".** A Takeout export writes a small
+  `.supplemental-metadata.json` next to every photo; with the "Other" file type enabled those were
+  backed up too, one extra message per photo. The new row counts them, then deletes them from the
+  index and from Telegram in bulk. Photos and videos are never touched.
+* Turning a file type off stops new uploads but cannot cancel what is already queued — the cleanup
+  row handles that backlog as well, because it cancels each queued transfer before deleting.
+
 ## 1.0.12 — your app, your name
 
 * **About screen no longer credits or links the upstream project.** The "Upstream project" row is

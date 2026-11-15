@@ -1014,4 +1014,13 @@
         <item>Español</item>
         <item>Bahasa Indonesia</item>
     </string-array>
+    <string name="backup_cleanup_sidecars">Clean up Google Takeout sidecars</string>
+    <string name="backup_cleanup_sidecars_summary">Finds the small .json files Takeout writes next to every photo</string>
+    <string name="backup_cleanup_found">%1$d files found — tap to delete</string>
+    <string name="backup_cleanup_none">Nothing found</string>
+    <string name="backup_cleanup_working">Working…</string>
+    <string name="backup_cleanup_confirm_title">Delete sidecar files?</string>
+    <string name="backup_cleanup_confirm_body">This removes %1$d files from the index and deletes their messages in Telegram. Photos and videos are not touched. It cannot be undone.</string>
+    <string name="backup_cleanup_done">Removed %1$d files</string>
+    <string name="backup_cleanup_delete">Delete</string>
 </resources>
