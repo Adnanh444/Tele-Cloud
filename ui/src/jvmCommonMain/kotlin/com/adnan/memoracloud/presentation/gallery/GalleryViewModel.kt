@@ -374,10 +374,7 @@ class GalleryViewModel(
                 fileRepository.getFiles(targets.fileIds).mapNotNull { it.localPath }
             }
             if (scope != DeleteScope.CLOUD) {
-                when (val result = fileRepository.deleteLocalCopy(targets.fileIds)) {
-                    is AppResult.Success -> Unit
-                    is AppResult.Failure -> reportFailure(result.error)
-                }
+                fileRepository.deleteLocalCopy(targets.fileIds).reportFailure()
             }
             if (scope != DeleteScope.PHONE) {
                 trashRepository.moveFilesToTrash(targets.fileIds).reportFailure()
