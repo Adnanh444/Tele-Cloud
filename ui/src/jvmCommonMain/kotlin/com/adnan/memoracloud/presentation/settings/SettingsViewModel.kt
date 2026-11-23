@@ -34,6 +34,7 @@ import com.adnan.memoracloud.presentation.common.toUiText
 import com.adnan.memoracloud.presentation.files.ShareRequest
 import com.adnan.memoracloud.resources.Res
 import com.adnan.memoracloud.resources.backup_cleanup_done
+import com.adnan.memoracloud.resources.settings_device_favorites_done
 import com.adnan.memoracloud.resources.about_no_update
 import com.adnan.memoracloud.resources.files_removed_local_copies
 import com.adnan.memoracloud.resources.message_backing_up_new_folder
@@ -108,6 +109,14 @@ class SettingsViewModel(
 
     private val _sidecarWorking = MutableStateFlow(false)
     val sidecarWorking: StateFlow<Boolean> = _sidecarWorking.asStateFlow()
+
+    /** Pulls the phone gallery's favourite flag into the library. */
+    fun importDeviceFavorites() {
+        viewModelScope.launch {
+            val changed = runCatching { fileRepository.importDeviceFavorites() }.getOrDefault(0)
+            _messages.tryEmit(UiText.Resource(Res.string.settings_device_favorites_done, changed))
+        }
+    }
 
     fun scanSidecars() {
         if (_sidecarWorking.value) return

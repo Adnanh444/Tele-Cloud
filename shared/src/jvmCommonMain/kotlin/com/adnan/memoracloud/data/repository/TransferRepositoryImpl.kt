@@ -43,6 +43,12 @@ class TransferRepositoryImpl(
 
     private val enqueueLock = Mutex()
 
+    override suspend fun recoverStale(): Int {
+        val now = System.currentTimeMillis()
+        return runCatching { transferDao.resetStaleRunning(now - STALE_RUNNING_MS, now) }
+            .getOrDefault(0)
+    }
+
     override fun observeSection(
         section: TransferSection,
         limit: Int
@@ -380,6 +386,11 @@ class TransferRepositoryImpl(
         syncFileStates()
     }
 
+    override suspend fun clearFailed() {
+        transferDao.clearFailed()
+        syncFileStates()
+    }
+
     override suspend fun recoverOrphanedTransfers() {
         transferDao.requeueRunning()
         syncFileStates()
@@ -407,6 +418,9 @@ class TransferRepositoryImpl(
 
     companion object {
         private const val TAG = "TransferRepository"
+
+        /** Progress refreshes updatedAt, so a row older than this is not actually running. */
+        private const val STALE_RUNNING_MS = 15L * 60 * 1000
         private const val STORAGE_MARGIN = 100L * 1024 * 1024
         private const val SQL_BATCH = 500
     }

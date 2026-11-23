@@ -26,6 +26,12 @@ Last updated: Part 4 (restore wizard; AI removed).
 | Credentials stored securely | ✅ | `KeystoreManager`, encrypted `api_hash`, TDLib session in app-private storage |
 | Re-detect the channel after a reinstall | ✅ | title search + `#memoracloud-storage` marker adoption |
 | Recovery with same account + channel | ✅ | cloud manifest + index snapshot rebuild |
+| Delete asks Both / Cloud only / Phone only, always via Trash | ✅ | `DeleteScope`, `DeleteScopeDialog` |
+| Share a cloud-only file (downloads first, then shares) | ✅ | `FilesViewModel.shareSelected`, gallery too |
+| Failed queue rows abandoned + **Clear failed** | ✅ | `TransferExecutor`, `TransferDao.clearFailed` |
+| Favourite sync with the device gallery (`IS_FAVORITE`) + one-tap import | ✅ | `DeviceFavorites`, `MediaStoreFavorites` |
+| Queue recovery after a killed process (no stuck rows) | ✅ | `TransferDao.resetStaleRunning`, `recoverStale()` |
+| Source file deleted from the phone → transfer abandoned, not retried | ✅ | `TransferOutcome.Abandoned` |
 | Google Takeout sidecar cleanup (count + bulk delete) | ✅ | `SidecarCleanup`, Settings > Backup |
 | Never delete backup files during normal sync | ✅ | deletion is explicit and goes through Trash → `PendingDeleteEntity` |
 | No separate Memora login | ✅ | Telegram credentials only |

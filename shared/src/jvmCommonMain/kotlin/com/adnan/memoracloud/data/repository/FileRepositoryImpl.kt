@@ -66,7 +66,8 @@ class FileRepositoryImpl(
     private val streamCrypto: StreamCrypto,
     private val wrappedKeyRepository: WrappedKeyRepository,
     private val settingsRepository: SettingsRepository,
-    private val fileImporter: FileImporter
+    private val fileImporter: FileImporter,
+    private val deviceFavorites: com.adnan.memoracloud.core.files.DeviceFavorites
 ) : FileRepository {
 
     override suspend fun resolveImportFolder(relativePath: String, parentId: String?): String? =
@@ -485,6 +486,37 @@ class FileRepositoryImpl(
     override suspend fun setFilesFavorite(ids: List<String>, favorite: Boolean) {
         fileDao.setFavorite(ids, favorite)
         markFilesDirty(ids)
+        // Keep the phone's own gallery mark in step with the star in this app.
+        runCatching {
+            ids.chunked(SQL_BATCH)
+                .flatMap { chunk -> fileDao.byIds(chunk) }
+                .forEach { entity ->
+                    entity.localPath?.let { path ->
+                        deviceFavorites.setFavorite(path, favorite)
+                    }
+                }
+        }
+    }
+
+    /**
+     * Files the phone's gallery marks as favourite are starred here too, so a favourite picked
+     * outside the app is not invisible inside it.
+     */
+    override suspend fun importDeviceFavorites(): Int {
+        val favourites = runCatching { deviceFavorites.favoritePaths() }.getOrDefault(emptyList())
+        if (favourites.isEmpty()) return 0
+        var changed = 0
+        favourites.chunked(SQL_BATCH).forEach { chunk ->
+            val ids = chunk.mapNotNull { path -> fileDao.byLocalPath(path, activeChannel.id()) }
+                .filterNot { it.isFavorite }
+                .map { it.id }
+            if (ids.isNotEmpty()) {
+                fileDao.setFavorite(ids, true)
+                markFilesDirty(ids)
+                changed += ids.size
+            }
+        }
+        return changed
     }
 
     override suspend fun setFilesHidden(ids: List<String>, hidden: Boolean) {

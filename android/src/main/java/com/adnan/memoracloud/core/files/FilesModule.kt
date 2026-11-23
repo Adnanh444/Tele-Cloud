@@ -12,4 +12,5 @@ val filesModule = module {
     singleOf(::MediaStoreLocalCopyDeleter) bind LocalCopyDeleter::class
     singleOf(::AndroidPendingShare) bind PendingShare::class
     singleOf(::MediaStoreFolderScanner) bind DeviceFolderScanner::class
+    singleOf(::MediaStoreFavorites) bind DeviceFavorites::class
 }

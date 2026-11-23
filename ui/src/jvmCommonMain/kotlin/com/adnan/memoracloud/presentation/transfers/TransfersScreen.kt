@@ -85,6 +85,8 @@ import com.adnan.memoracloud.resources.transfer_type_upload
 import com.adnan.memoracloud.resources.transfers
 import com.adnan.memoracloud.resources.transfers_cancel
 import com.adnan.memoracloud.resources.transfers_cancel_transfers
+import com.adnan.memoracloud.resources.transfers_clear_failed
+import com.adnan.memoracloud.resources.transfers_failed_entries_removed
 import com.adnan.memoracloud.resources.transfers_clear_finished
 import com.adnan.memoracloud.resources.transfers_clear_finished_transfers
 import com.adnan.memoracloud.resources.transfers_completed_canceled_entries_removed
@@ -114,6 +116,7 @@ fun TransfersScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var confirmClearFinished by remember { mutableStateOf(false) }
+    var confirmClearFailed by remember { mutableStateOf(false) }
     var confirmCancelAll by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
@@ -127,6 +130,19 @@ fun TransfersScreen(
                 viewModel.clearFinished()
             },
             onDismiss = { confirmClearFinished = false }
+        )
+    }
+
+    if (confirmClearFailed) {
+        ConfirmDialog(
+            title = stringResource(Res.string.transfers_clear_failed),
+            message = stringResource(Res.string.transfers_failed_entries_removed),
+            confirmLabel = stringResource(Res.string.common_clear),
+            onConfirm = {
+                confirmClearFailed = false
+                viewModel.clearFailed()
+            },
+            onDismiss = { confirmClearFailed = false }
         )
     }
 
@@ -213,6 +229,14 @@ fun TransfersScreen(
                             onClick = {
                                 showMenu = false
                                 confirmClearFinished = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.transfers_clear_failed)) },
+                            enabled = state.failed.isNotEmpty(),
+                            onClick = {
+                                showMenu = false
+                                confirmClearFailed = true
                             }
                         )
                     }

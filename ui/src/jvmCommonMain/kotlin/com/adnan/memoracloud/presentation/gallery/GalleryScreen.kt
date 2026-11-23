@@ -71,6 +71,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -96,6 +97,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.adnan.memoracloud.resources.Res
+import com.adnan.memoracloud.presentation.platform.LocalFileSharer
 import com.adnan.memoracloud.resources.common_actions
 import com.adnan.memoracloud.resources.common_add_favorites
 import com.adnan.memoracloud.resources.common_back
@@ -109,6 +111,8 @@ import com.adnan.memoracloud.resources.common_rename_file
 import com.adnan.memoracloud.resources.common_restore_trash_emptied
 import com.adnan.memoracloud.resources.common_select_all
 import com.adnan.memoracloud.resources.common_selection_count
+import com.adnan.memoracloud.resources.common_share
+import com.adnan.memoracloud.resources.preview_share_chooser_title
 import com.adnan.memoracloud.resources.common_upload
 import com.adnan.memoracloud.resources.date_days_ago
 import com.adnan.memoracloud.resources.date_today
@@ -127,6 +131,7 @@ import com.adnan.memoracloud.presentation.common.isInitialLoad
 import com.adnan.memoracloud.presentation.components.RefreshAction
 import com.adnan.memoracloud.presentation.components.RefreshableContent
 import com.adnan.memoracloud.presentation.components.ConfirmDialog
+import com.adnan.memoracloud.presentation.components.DeleteScopeDialog
 import com.adnan.memoracloud.presentation.components.EmptyState
 import com.adnan.memoracloud.presentation.components.FileGridItem
 import com.adnan.memoracloud.presentation.components.FileListItem
@@ -261,7 +266,6 @@ fun GalleryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val media = viewModel.pagedMedia.collectAsLazyPagingItems()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
-    var confirmTrash by remember { mutableStateOf(false) }
     var showSelectionOverflow by remember { mutableStateOf(false) }
     var showMovePicker by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -283,21 +287,21 @@ fun GalleryScreen(
         )
     }
 
-    if (confirmTrash) {
-        ConfirmDialog(
-            title = stringResource(
-                Res.string.common_confirm_trash_count_title,
-                state.selection.size
-            ),
-            message = stringResource(Res.string.common_restore_trash_emptied),
-            confirmLabel = stringResource(Res.string.common_move_trash),
-            destructive = true,
-            onConfirm = {
-                confirmTrash = false
-                viewModel.trashSelected()
-            },
-            onDismiss = { confirmTrash = false }
+    val deleteTargets by viewModel.deleteTargets.collectAsStateWithLifecycle()
+    deleteTargets?.let { targets ->
+        DeleteScopeDialog(
+            count = targets.count,
+            onSelect = viewModel::confirmDelete,
+            onDismiss = viewModel::dismissDeleteRequest
         )
+    }
+
+    val fileSharer = LocalFileSharer.current
+    val shareChooserTitle = stringResource(Res.string.preview_share_chooser_title)
+    LaunchedEffect(Unit) {
+        viewModel.shareRequests.collect { request ->
+            fileSharer.share(request.paths, request.mimeType, shareChooserTitle)
+        }
     }
 
     renameTarget?.let { file ->
@@ -374,6 +378,18 @@ fun GalleryScreen(
                                 } else {
                                     stringResource(Res.string.common_select_all)
                                 }
+                            )
+                        }
+                        IconButton(onClick = viewModel::shareSelected) {
+                            Icon(
+                                Icons.Filled.Share,
+                                contentDescription = stringResource(Res.string.common_share)
+                            )
+                        }
+                        IconButton(onClick = viewModel::requestDeleteSelected) {
+                            Icon(
+                                Icons.Filled.DeleteOutline,
+                                contentDescription = stringResource(Res.string.common_move_trash)
                             )
                         }
                         Box {
@@ -478,7 +494,7 @@ fun GalleryScreen(
                                     MenuAction(
                                         label = stringResource(Res.string.common_move_trash),
                                         icon = Icons.Filled.DeleteOutline
-                                    ) { confirmTrash = true }
+                                    ) { viewModel.requestDeleteSelected() }
                                 )
                             }
                             ActionMenu(
@@ -631,7 +647,7 @@ fun GalleryScreen(
                 onSelectAll = viewModel::selectAll,
                 onDelete = { index ->
                     selectIfNone(index)
-                    if (viewModel.hasSelection()) confirmTrash = true
+                    if (viewModel.hasSelection()) viewModel.requestDeleteSelected()
                 },
                 onRename = { index -> mediaIdAt(index)?.let(viewModel::requestRename) },
                 onCut = { index ->

@@ -40,6 +40,7 @@ import com.adnan.memoracloud.presentation.common.AppBackHandler
 import com.adnan.memoracloud.presentation.common.isInitialLoad
 import com.adnan.memoracloud.presentation.components.CollectionShortcuts
 import com.adnan.memoracloud.presentation.components.ConfirmDialog
+import com.adnan.memoracloud.presentation.components.DeleteScopeDialog
 import com.adnan.memoracloud.presentation.components.EmptyState
 import com.adnan.memoracloud.presentation.components.FileListItem
 import com.adnan.memoracloud.presentation.components.FolderRow
@@ -84,21 +85,15 @@ fun CollectionScreen(
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val missingCount by viewModel.missingCount.collectAsStateWithLifecycle()
     val offline = viewModel.type == CollectionType.AVAILABLE_OFFLINE
-    var confirmTrash by remember { mutableStateOf(false) }
 
     AppBackHandler(enabled = selectionMode) { viewModel.clearSelection() }
 
-    if (confirmTrash) {
-        ConfirmDialog(
-            title = stringResource(Res.string.common_confirm_trash_count_title, selectionCount),
-            message = stringResource(Res.string.common_restore_trash_emptied),
-            confirmLabel = stringResource(Res.string.common_move_trash),
-            destructive = true,
-            onConfirm = {
-                confirmTrash = false
-                viewModel.trashSelected()
-            },
-            onDismiss = { confirmTrash = false }
+    val deleteTargets by viewModel.deleteTargets.collectAsStateWithLifecycle()
+    deleteTargets?.let { targets ->
+        DeleteScopeDialog(
+            count = targets.count,
+            onSelect = viewModel::confirmDelete,
+            onDismiss = viewModel::dismissDeleteRequest
         )
     }
 
@@ -179,7 +174,7 @@ fun CollectionScreen(
                                 )
                             )
                         }
-                        IconButton(onClick = { confirmTrash = true }) {
+                        IconButton(onClick = { viewModel.requestDeleteSelected() }) {
                             Icon(
                                 Icons.Filled.Delete,
                                 contentDescription = stringResource(Res.string.common_move_trash)
@@ -247,7 +242,7 @@ fun CollectionScreen(
             onSelectAll = viewModel::selectAll,
             onDelete = { index ->
                 if (!selectionMode) toggleAt(index)
-                confirmTrash = true
+                viewModel.requestDeleteSelected()
             },
             onBack = onBack,
             onClear = if (selectionMode) viewModel::clearSelection else null

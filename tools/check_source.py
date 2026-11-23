@@ -200,6 +200,48 @@ def main():
                 continue
             problems.append(f"{relative}: uses {symbol} but does not import {needed}")
 
+    # 8. Kotlin does not accept a fully qualified name after `::` - it needs an import. This broke
+    #    the build once already ("Unresolved reference 'com'").
+    for path in files:
+        try:
+            text = open(path, encoding="utf-8").read()
+        except Exception:  # noqa: BLE001
+            continue
+        for match in re.finditer(r"::([A-Za-z_][\w.]*\.[A-Za-z_]\w*)", text):
+            target = match.group(1)
+            if target.count(".") < 2 or target.startswith(("class", "super")):
+                continue
+            problems.append(
+                f"{os.path.relpath(path, ROOT)}: callable reference '::{target}' "
+                "cannot be fully qualified; import the class instead"
+            )
+
+    # 9. Kotlin extension imports (dp, heightIn, verticalScroll...) are used with a dot, so a naive
+    #    "unused import" sweep removes the import while the call sites stay. Catch the compile error
+    #    before it reaches CI.
+    extension_imports = {
+        "androidx.compose.ui.unit.dp": r"\.dp\b",
+        "androidx.compose.foundation.layout.heightIn": r"\.heightIn\(",
+        "androidx.compose.foundation.layout.height": r"\.height\(",
+        "androidx.compose.foundation.layout.width": r"\.width\(",
+        "androidx.compose.foundation.verticalScroll": r"\.verticalScroll\(",
+        "androidx.compose.foundation.rememberScrollState": r"\brememberScrollState\(",
+    }
+    for path in files:
+        try:
+            text = open(path, encoding="utf-8").read()
+        except Exception:  # noqa: BLE001
+            continue
+        for needed, pattern in extension_imports.items():
+            if not re.search(pattern, text):
+                continue
+            if f"import {needed}" in text:
+                continue
+            problems.append(
+                f"{os.path.relpath(path, ROOT)}: uses {needed.rsplit('.', 1)[1]} "
+                f"but does not import {needed}"
+            )
+
     # 6. XML validity
     patterns = [
         "android/src/main/res/**/*.xml",

@@ -15,6 +15,11 @@ class TransfersViewModel(
     private val transferRepository: TransferRepository
 ) : ViewModel() {
 
+    init {
+        // Anything left RUNNING by a killed process would otherwise sit in the list forever.
+        viewModelScope.launch { runCatching { transferRepository.recoverStale() } }
+    }
+
     private val rows = combine(
         transferRepository.observeSection(TransferSection.ACTIVE, SECTION_LIMIT),
         transferRepository.observeSection(TransferSection.PAUSED, SECTION_LIMIT),
@@ -73,6 +78,8 @@ class TransfersViewModel(
     fun cancelAll() = launch { transferRepository.cancelAll() }
 
     fun clearFinished() = launch { transferRepository.clearFinished() }
+
+    fun clearFailed() = launch { transferRepository.clearFailed() }
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }

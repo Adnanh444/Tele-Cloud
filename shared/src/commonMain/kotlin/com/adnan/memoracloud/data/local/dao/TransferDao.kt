@@ -81,6 +81,17 @@ interface TransferDao {
     )
     suspend fun unfinishedIdsForFiles(fileIds: List<String>): List<String>
 
+    /**
+     * A transfer left in RUNNING by a process that was killed is never claimable again - the queue
+     * skips it, but it still counts as active, so the screen shows one item forever and the queue
+     * looks stuck. Rows whose progress stopped moving are put back in the queue.
+     */
+    @Query(
+        """UPDATE transfers SET state = 'QUEUED', updatedAt = :now
+           WHERE state = 'RUNNING' AND updatedAt < :staleBefore"""
+    )
+    suspend fun resetStaleRunning(staleBefore: Long, now: Long): Int
+
     @Query("SELECT * FROM transfers WHERE state = 'QUEUED' ORDER BY priority DESC, createdAt ASC LIMIT :limit")
     suspend fun nextQueued(limit: Int): List<TransferEntity>
 
@@ -147,6 +158,9 @@ interface TransferDao {
 
     @Query("DELETE FROM transfers WHERE state IN ('COMPLETED', 'CANCELLED')")
     suspend fun clearFinished()
+
+    @Query("DELETE FROM transfers WHERE state = 'FAILED'")
+    suspend fun clearFailed()
 
     @Query(
         """UPDATE transfers SET state = 'PAUSED', updatedAt = :now

@@ -45,6 +45,12 @@ class TransferQueueDrainer(
         var interrupted = false
         var backupsHeld = false
 
+        // A process killed mid-upload leaves rows in RUNNING that the queue can never claim again.
+        runCatching {
+            val now = System.currentTimeMillis()
+            transferDao.resetStaleRunning(now - STALE_RUNNING_MS, now)
+        }
+
         coroutineScope {
             List(MAX_CONCURRENCY) { slot ->
                 launch {
@@ -176,6 +182,22 @@ class TransferQueueDrainer(
                     return
                 }
 
+                is TransferOutcome.Abandoned -> {
+                    withContext(NonCancellable) {
+                        transferDao.setFailed(
+                            transferId,
+                            TransferState.CANCELLED,
+                            outcome.message,
+                            System.currentTimeMillis()
+                        )
+                        current.fileId?.let { fileId ->
+                            fileDao.setBackupStateIfLocalOnly(fileId, BackupState.FAILED)
+                        }
+                    }
+                    refreshSession(current.backupSessionId)
+                    return
+                }
+
                 is TransferOutcome.Canceled -> {
                     markState(transferId, TransferState.CANCELLED)
                     refreshSession(current.backupSessionId)
@@ -222,6 +244,7 @@ class TransferQueueDrainer(
         const val MAX_CONCURRENCY = 6
         const val SLOT_WAIT_MS = 5_000L
         const val IDLE_POLL_MS = 1_000L
+        const val STALE_RUNNING_MS = 15L * 60 * 1000
         const val BASE_BACKOFF_SECONDS = 2
         const val MAX_BACKOFF_SECONDS = 300
     }

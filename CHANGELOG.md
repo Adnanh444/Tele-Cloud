@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.1.9
+
+* **Delete now asks which copy goes.** Select files, tap Delete, and choose **Both**, **Cloud only**
+  or **Phone only**. Cloud deletions always land in Trash (30 days, or until the trash is emptied),
+  never a permanent delete. A removed phone copy is never the last copy: the Telegram copy stays put,
+  so it can be downloaded again. **Cloud only** also records the file as excluded, because otherwise
+  the next scan would see it on the phone and upload it straight back.
+* **Share works for files that exist only in the cloud.** Tapping Share on a file that is not on the
+  phone downloads it first, then opens the share sheet. The download stays as an ordinary local copy.
+* **Failed uploads stop retrying forever.** A queue row with no file, no index entry or no local path
+  can never succeed, so it is abandoned instead of being retried. This is what left rows failing
+  again and again after an index rebuild.
+* **Clear failed** in the Transfers menu drops failed rows in one tap. The files are not touched.
+* **The main buttons are visible instead of buried in the ⋮ menu.** Files and the gallery both show
+  Select all, Share and Delete in the selection bar; move, copy, rename and the rest stay in ⋮.
+
+## 1.0.14 — a stuck queue clears itself
+
+* **Fixed the one-item-stuck-in-the-queue bug.** If the app was killed in the middle of an upload, the
+  transfer stayed marked as running. The queue can never claim a running item again, but it still
+  counted as active — so one row sat in the list forever and everything behind it looked stuck.
+  Stale running rows (progress not moving for 15 minutes) are now put back in the queue when the
+  queue starts and when the Transfers screen is opened.
+* **A file deleted from the phone no longer blocks anything.** If the source file is gone, the
+  transfer is now abandoned immediately (marked cancelled, with the reason kept) instead of being
+  retried several times and failing again.
+* **The crash dialog is gone** at the user's request. Nothing interrupts startup any more.
+* **Favourites now talk to the phone's gallery.** Starring a photo or video in the app sets the
+  device's own favourite flag (`IS_FAVORITE`, Android 11+), so it shows as favourite in the system
+  gallery too. Settings → Storage → *Import favourites from the phone gallery* pulls the other way:
+  photos the gallery already marks as favourite get starred here.
+
 ## 1.0.13 — clean up Google Takeout leftovers
 
 * **New: Settings → Backup → "Clean up Google Takeout sidecars".** A Takeout export writes a small

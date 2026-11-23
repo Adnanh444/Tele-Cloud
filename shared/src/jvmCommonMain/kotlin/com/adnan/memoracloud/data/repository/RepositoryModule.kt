@@ -1,6 +1,7 @@
 package com.adnan.memoracloud.data.repository
 
 import com.adnan.memoracloud.core.telegram.TelegramSession
+import com.adnan.memoracloud.core.transfer.SidecarCleanup
 import com.adnan.memoracloud.data.remote.telegram.ManifestCodec
 import com.adnan.memoracloud.domain.repository.BackupRepository
 import com.adnan.memoracloud.domain.repository.CacheRepository
@@ -20,7 +21,7 @@ import org.koin.dsl.module
 
 val repositoryModule = module {
     singleOf(::ManifestCodec)
-    singleOf(::com.adnan.memoracloud.core.transfer.SidecarCleanup)
+    singleOf(::SidecarCleanup)
     singleOf(::ActiveChannel)
     singleOf(::ChannelOwnership)
     singleOf(::FolderOwnershipRepair)

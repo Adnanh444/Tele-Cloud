@@ -12,6 +12,9 @@ import com.adnan.memoracloud.domain.model.FileQuerySpec
 import com.adnan.memoracloud.domain.model.FileSortField
 import com.adnan.memoracloud.domain.model.SortDirection
 import com.adnan.memoracloud.domain.model.TransferState
+import com.adnan.memoracloud.domain.model.DeleteScope
+import com.adnan.memoracloud.domain.model.ExclusionType
+import com.adnan.memoracloud.domain.repository.ExclusionRepository
 import com.adnan.memoracloud.domain.repository.FileRepository
 import com.adnan.memoracloud.domain.repository.TransferRepository
 import com.adnan.memoracloud.domain.repository.TrashRepository
@@ -35,6 +38,7 @@ class CollectionViewModel(
     private val fileRepository: FileRepository,
     private val trashRepository: TrashRepository,
     private val transferRepository: TransferRepository,
+    private val exclusionRepository: ExclusionRepository,
     private val makeAvailableOffline: MakeAvailableOfflineUseCase
 ) : ViewModel() {
 
@@ -172,6 +176,52 @@ class CollectionViewModel(
                 CollectionType.HIDDEN -> {
                     if (ids.isNotEmpty()) fileRepository.setFilesHidden(ids, false)
                     folderIds.forEach { fileRepository.setFolderHidden(it, false) }
+                }
+            }
+        }
+    }
+
+    data class DeleteTargets(val fileIds: List<String>, val folderIds: List<String>) {
+        val count: Int get() = fileIds.size + folderIds.size
+    }
+
+    private val _deleteTargets = MutableStateFlow<DeleteTargets?>(null)
+    val deleteTargets: StateFlow<DeleteTargets?> = _deleteTargets.asStateFlow()
+
+    fun requestDeleteSelected() {
+        val ids = _selection.value.toList()
+        val folderIds = _folderSelection.value.toList()
+        if (ids.isEmpty() && folderIds.isEmpty()) return
+        _deleteTargets.value = DeleteTargets(ids, folderIds)
+    }
+
+    fun dismissDeleteRequest() {
+        _deleteTargets.value = null
+    }
+
+    /** Cloud copies go to Trash; a removed phone copy is still on Telegram, so nothing is lost. */
+    fun confirmDelete(scope: DeleteScope) {
+        val targets = _deleteTargets.value ?: return
+        _deleteTargets.value = null
+        clearSelection()
+        viewModelScope.launch {
+            val paths = if (scope == DeleteScope.PHONE) {
+                emptyList()
+            } else {
+                fileRepository.getFiles(targets.fileIds).mapNotNull { it.localPath }
+            }
+            if (scope != DeleteScope.CLOUD && targets.fileIds.isNotEmpty()) {
+                fileRepository.deleteLocalCopy(targets.fileIds)
+            }
+            if (scope != DeleteScope.PHONE) {
+                if (targets.fileIds.isNotEmpty()) {
+                    trashRepository.moveFilesToTrash(targets.fileIds)
+                }
+                targets.folderIds.forEach { trashRepository.moveFolderToTrash(it) }
+                paths.forEach { path ->
+                    runCatching {
+                        exclusionRepository.add(ExclusionType.FILE_PATH, path.lowercase())
+                    }
                 }
             }
         }

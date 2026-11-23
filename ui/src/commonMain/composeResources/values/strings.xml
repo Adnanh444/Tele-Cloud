@@ -1023,4 +1023,18 @@
     <string name="backup_cleanup_confirm_body">This removes %1$d files from the index and deletes their messages in Telegram. Photos and videos are not touched. It cannot be undone.</string>
     <string name="backup_cleanup_done">Removed %1$d files</string>
     <string name="backup_cleanup_delete">Delete</string>
+    <string name="settings_device_favorites">Import favourites from the phone gallery</string>
+    <string name="settings_device_favorites_summary">Stars photos the device already marks as favourite</string>
+    <string name="settings_device_favorites_done">Starred %1$d files</string>
+    <string name="files_preparing_share">Downloading %1$d file(s) to share…</string>
+    <string name="files_share_some_missing">%1$d file(s) could not be prepared</string>
+    <string name="files_delete_scope_title">Delete %1$d item(s)</string>
+    <string name="files_delete_scope_cloud">Cloud only</string>
+    <string name="files_delete_scope_cloud_summary">Removes the Telegram copy and moves it to Trash. The file stays on your phone and will not be uploaded again.</string>
+    <string name="files_delete_scope_phone">Phone only</string>
+    <string name="files_delete_scope_phone_summary">Deletes the copy on your phone. The cloud copy stays, so you can download it again any time.</string>
+    <string name="files_delete_scope_both">Both</string>
+    <string name="files_delete_scope_both_summary">Deletes the copy on your phone and moves the cloud copy to Trash for 30 days.</string>
+    <string name="transfers_clear_failed">Clear failed</string>
+    <string name="transfers_failed_entries_removed">Failed entries are removed from this list. Your files are not touched.</string>
 </resources>

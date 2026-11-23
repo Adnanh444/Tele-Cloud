@@ -123,6 +123,7 @@ import com.adnan.memoracloud.presentation.components.BlockingProgressDialog
 import com.adnan.memoracloud.presentation.components.BottomBarSnackbarHost
 import com.adnan.memoracloud.presentation.components.CollectionShortcuts
 import com.adnan.memoracloud.presentation.components.ConfirmDialog
+import com.adnan.memoracloud.presentation.components.DeleteScopeDialog
 import com.adnan.memoracloud.presentation.components.EmptyState
 import com.adnan.memoracloud.presentation.components.FileGridItem
 import com.adnan.memoracloud.presentation.components.SortMenu
@@ -161,7 +162,6 @@ import com.adnan.memoracloud.resources.common_add_favorites
 import com.adnan.memoracloud.resources.common_back
 import com.adnan.memoracloud.resources.common_cancel
 import com.adnan.memoracloud.resources.common_clear_selection
-import com.adnan.memoracloud.resources.common_confirm_trash_count_title
 import com.adnan.memoracloud.resources.common_create
 import com.adnan.memoracloud.resources.common_deselect_all
 import com.adnan.memoracloud.resources.common_download
@@ -171,7 +171,6 @@ import com.adnan.memoracloud.resources.common_move_trash
 import com.adnan.memoracloud.resources.common_organize
 import com.adnan.memoracloud.resources.common_remove_from_offline
 import com.adnan.memoracloud.resources.common_rename
-import com.adnan.memoracloud.resources.common_restore_trash_emptied
 import com.adnan.memoracloud.resources.common_select_all
 import com.adnan.memoracloud.resources.common_selection_count
 import com.adnan.memoracloud.resources.common_share
@@ -254,7 +253,6 @@ fun FilesScreen(
     var showMovePicker by remember { mutableStateOf(false) }
     var showCopyPicker by remember { mutableStateOf(false) }
     var showSelectionOverflow by remember { mutableStateOf(false) }
-    var confirmTrash by remember { mutableStateOf(false) }
     val uploadPicker = LocalMultiFilePicker.current
     val onPickUploads = {
         uploadPicker.pick { references ->
@@ -386,10 +384,21 @@ fun FilesScreen(
                                         }
                                     )
                                 }
-                                IconButton(onClick = { showMovePicker = true }) {
+                                IconButton(
+                                    onClick = viewModel::shareSelected,
+                                    enabled = !state.folderInSelection
+                                ) {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.DriveFileMove,
-                                        contentDescription = stringResource(Res.string.files_move)
+                                        Icons.Filled.Share,
+                                        contentDescription = stringResource(Res.string.common_share)
+                                    )
+                                }
+                                IconButton(onClick = viewModel::requestDeleteSelected) {
+                                    Icon(
+                                        Icons.Filled.DeleteOutline,
+                                        contentDescription = stringResource(
+                                            Res.string.common_move_trash
+                                        )
                                     )
                                 }
                                 Box {
@@ -510,6 +519,12 @@ fun FilesScreen(
                                                 ) { showCopyPicker = true }
                                             )
                                         }
+                                        add(
+                                            MenuAction(
+                                                label = stringResource(Res.string.files_move),
+                                                icon = Icons.AutoMirrored.Filled.DriveFileMove
+                                            ) { showMovePicker = true }
+                                        )
                                         if (storage.isNotEmpty()) {
                                             add(
                                                 MenuAction(
@@ -546,7 +561,7 @@ fun FilesScreen(
                                             MenuAction(
                                                 label = stringResource(Res.string.common_move_trash),
                                                 icon = Icons.Filled.DeleteOutline
-                                            ) { confirmTrash = true }
+                                            ) { viewModel.requestDeleteSelected() }
                                         )
                                     }
 
@@ -730,7 +745,7 @@ fun FilesScreen(
                                 ),
                                 onOpenFolder = onOpenFolder,
                                 onOpenFile = onOpenFile,
-                                onRequestTrash = { confirmTrash = true },
+                                onRequestTrash = { viewModel.requestDeleteSelected() },
                                 onBack = onBack,
                                 viewModel = viewModel
                             )
@@ -846,20 +861,12 @@ fun FilesScreen(
             onDismiss = viewModel::dismissRename
         )
     }
-    if (confirmTrash) {
-        ConfirmDialog(
-            title = stringResource(
-                Res.string.common_confirm_trash_count_title,
-                state.selectionCount
-            ),
-            message = stringResource(Res.string.common_restore_trash_emptied),
-            confirmLabel = stringResource(Res.string.common_move_trash),
-            destructive = true,
-            onConfirm = {
-                confirmTrash = false
-                viewModel.trashSelected()
-            },
-            onDismiss = { confirmTrash = false }
+    val deleteTargets by viewModel.deleteTargets.collectAsStateWithLifecycle()
+    deleteTargets?.let { targets ->
+        DeleteScopeDialog(
+            count = targets.count,
+            onSelect = viewModel::confirmDelete,
+            onDismiss = viewModel::dismissDeleteRequest
         )
     }
     if (confirmDeleteLocal) {

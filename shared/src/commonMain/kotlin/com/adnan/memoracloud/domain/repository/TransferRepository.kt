@@ -22,6 +22,9 @@ interface TransferRepository {
 
     suspend fun enqueuePendingUploads(): AppResult<Int>
 
+    /** Puts transfers abandoned by a killed process back in the queue. Returns how many. */
+    suspend fun recoverStale(): Int
+
     /**
      * Checks are answered once per run and rows written in batches, so a large scan avoids a round
      * trip per file.
@@ -47,6 +50,9 @@ interface TransferRepository {
     suspend fun cancelAll()
 
     suspend fun clearFinished()
+
+    /** Drops failed rows only; the files themselves are left alone. */
+    suspend fun clearFailed()
 
     suspend fun recoverOrphanedTransfers()
 }

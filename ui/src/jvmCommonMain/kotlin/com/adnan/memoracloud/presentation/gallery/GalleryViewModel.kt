@@ -2,10 +2,14 @@ package com.adnan.memoracloud.presentation.gallery
 
 import com.adnan.memoracloud.core.common.AppError
 import com.adnan.memoracloud.presentation.common.UiText
+import com.adnan.memoracloud.presentation.files.ShareRequest
 import com.adnan.memoracloud.presentation.common.toUiText
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import com.adnan.memoracloud.domain.model.DeleteScope
 import com.adnan.memoracloud.domain.model.DriveFolder
+import com.adnan.memoracloud.domain.model.ExclusionType
 import com.adnan.memoracloud.core.common.AppResult
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -17,7 +21,12 @@ import androidx.paging.insertSeparators
 import androidx.paging.map
 import com.adnan.memoracloud.resources.Res
 import com.adnan.memoracloud.resources.files_cut_count
+import com.adnan.memoracloud.resources.files_preparing_share
 import com.adnan.memoracloud.resources.files_queued_for_download
+import com.adnan.memoracloud.resources.files_removed_local_copies
+import com.adnan.memoracloud.resources.files_share_needs_local
+import com.adnan.memoracloud.resources.files_share_some_missing
+import com.adnan.memoracloud.resources.message_moved_to_trash_count
 import com.adnan.memoracloud.domain.model.DriveFile
 import com.adnan.memoracloud.domain.model.FileCategory
 import com.adnan.memoracloud.domain.model.FileQuerySpec
@@ -25,6 +34,7 @@ import com.adnan.memoracloud.domain.model.FileSortField
 import com.adnan.memoracloud.domain.model.MediaAlbum
 import com.adnan.memoracloud.domain.model.SortDirection
 import com.adnan.memoracloud.domain.model.ViewMode
+import com.adnan.memoracloud.domain.repository.ExclusionRepository
 import com.adnan.memoracloud.domain.repository.FileRepository
 import com.adnan.memoracloud.domain.repository.SettingsRepository
 import com.adnan.memoracloud.domain.repository.SyncRepository
@@ -44,7 +54,6 @@ import com.adnan.memoracloud.presentation.components.zoomedOut
 import com.adnan.memoracloud.presentation.navigation.Route
 import com.adnan.memoracloud.presentation.preview.PreviewSequence
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -71,6 +80,7 @@ class GalleryViewModel(
     private val settingsRepository: SettingsRepository,
     private val syncRepository: SyncRepository,
     private val makeAvailableOffline: MakeAvailableOfflineUseCase,
+    private val exclusionRepository: ExclusionRepository,
     private val clipboard: FileClipboard
 ) : ViewModel() {
 
@@ -332,10 +342,89 @@ class GalleryViewModel(
         _messages.tryEmit(UiText.Resource(Res.string.files_cut_count, ids.size))
     }
 
-    fun trashSelected() {
+    data class DeleteTargets(val fileIds: List<String>) {
+        val count: Int get() = fileIds.size
+    }
+
+    private val _deleteTargets = MutableStateFlow<DeleteTargets?>(null)
+    val deleteTargets: StateFlow<DeleteTargets?> = _deleteTargets.asStateFlow()
+
+    private val _shareRequests = MutableSharedFlow<ShareRequest>(extraBufferCapacity = 2)
+    val shareRequests = _shareRequests.asSharedFlow()
+
+    fun requestDeleteSelected() {
         val ids = selection.value.toList()
+        if (ids.isEmpty()) return
+        _deleteTargets.value = DeleteTargets(ids)
+    }
+
+    fun dismissDeleteRequest() {
+        _deleteTargets.value = null
+    }
+
+    /** Same rules as Files: cloud copies go to Trash, a removed phone copy stays on Telegram. */
+    fun confirmDelete(scope: DeleteScope) {
+        val targets = _deleteTargets.value ?: return
+        _deleteTargets.value = null
         clearSelection()
-        viewModelScope.launch { trashRepository.moveFilesToTrash(ids).reportFailure() }
+        viewModelScope.launch {
+            val paths = if (scope == DeleteScope.PHONE) {
+                emptyList()
+            } else {
+                fileRepository.getFiles(targets.fileIds).mapNotNull { it.localPath }
+            }
+            if (scope != DeleteScope.CLOUD) {
+                when (val result = fileRepository.deleteLocalCopy(targets.fileIds)) {
+                    is AppResult.Success -> Unit
+                    is AppResult.Failure -> reportFailure(result.error)
+                }
+            }
+            if (scope != DeleteScope.PHONE) {
+                trashRepository.moveFilesToTrash(targets.fileIds).reportFailure()
+                paths.forEach { path ->
+                    runCatching {
+                        exclusionRepository.add(ExclusionType.FILE_PATH, path.lowercase())
+                    }
+                }
+                _messages.tryEmit(UiText.Resource(Res.string.message_moved_to_trash_count, targets.count))
+            } else {
+                _messages.tryEmit(UiText.Resource(Res.string.files_removed_local_copies, targets.count))
+            }
+        }
+    }
+
+    /** Downloads anything kept only in Telegram, then hands the files to the share sheet. */
+    fun shareSelected() {
+        val ids = selection.value.toList()
+        if (ids.isEmpty()) return
+        clearSelection()
+        viewModelScope.launch {
+            var files = fileRepository.getFiles(ids)
+            val missing = files.filter { it.localPath == null }
+            if (missing.isNotEmpty()) {
+                missing.forEach { file -> transferRepository.enqueueDownload(file.id) }
+                val timeoutMs = 20 * 60 * 1000L
+                val pollMs = 1000L
+                var waited = 0L
+                while (waited < timeoutMs) {
+                    delay(pollMs)
+                    waited += pollMs
+                    files = fileRepository.getFiles(ids)
+                    if (files.none { it.localPath == null }) break
+                }
+            }
+            val ready = files.filter { it.localPath != null }
+            if (ready.isEmpty()) {
+                _messages.tryEmit(UiText.Resource(Res.string.files_share_needs_local))
+                return@launch
+            }
+            val mimeType = ready.map { it.mimeType }.distinct().singleOrNull() ?: "*/*"
+            _shareRequests.tryEmit(ShareRequest(ready.mapNotNull { it.localPath }, mimeType))
+            val stillMissing = files.size - ready.size
+            if (stillMissing > 0) {
+                _messages.tryEmit(UiText.Resource(Res.string.files_share_some_missing, stillMissing))
+            }
+        }
     }
 
     fun downloadSelected() {

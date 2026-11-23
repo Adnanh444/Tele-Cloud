@@ -90,6 +90,8 @@ import com.adnan.memoracloud.resources.backup_cleanup_none
 import com.adnan.memoracloud.resources.backup_cleanup_sidecars
 import com.adnan.memoracloud.resources.backup_cleanup_sidecars_summary
 import com.adnan.memoracloud.resources.backup_cleanup_working
+import com.adnan.memoracloud.resources.settings_device_favorites
+import com.adnan.memoracloud.resources.settings_device_favorites_summary
 import com.adnan.memoracloud.resources.common_category_archives
 import com.adnan.memoracloud.resources.common_category_audio
 import com.adnan.memoracloud.resources.common_category_documents
@@ -860,6 +862,16 @@ private fun StorageSection(
 
     val downloadLocationConfigurable = LocalDownloadLocationConfigurable.current
     val downloadFolderPicker = LocalFolderPicker.current
+    SettingsGroup {
+        add {
+            SettingsClickRow(
+                title = stringResource(Res.string.settings_device_favorites),
+                subtitle = stringResource(Res.string.settings_device_favorites_summary),
+                onClick = { viewModel.importDeviceFavorites() }
+            )
+        }
+    }
+
     SettingsGroup {
         add(visible = downloadLocationConfigurable) {
             SettingsClickRow(

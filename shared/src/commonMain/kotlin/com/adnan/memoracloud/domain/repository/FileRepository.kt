@@ -85,6 +85,9 @@ interface FileRepository {
 
     suspend fun setFilesFavorite(ids: List<String>, favorite: Boolean)
 
+    /** Stars files the phone's gallery already marks as favourite. Returns how many changed. */
+    suspend fun importDeviceFavorites(): Int
+
     suspend fun setFilesAvailableOffline(ids: List<String>, available: Boolean)
 
     suspend fun setFilesHidden(ids: List<String>, hidden: Boolean)

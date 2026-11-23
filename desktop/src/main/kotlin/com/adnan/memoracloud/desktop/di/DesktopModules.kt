@@ -102,6 +102,11 @@ import org.koin.dsl.module
 val desktopModule = module {
     includes(
         daosModule,
+        module {
+            single<com.adnan.memoracloud.core.files.DeviceFavorites> {
+                com.adnan.memoracloud.core.files.DeviceFavorites.None
+            }
+        },
         repositoryModule,
         useCaseModule,
         sharedFilesModule,

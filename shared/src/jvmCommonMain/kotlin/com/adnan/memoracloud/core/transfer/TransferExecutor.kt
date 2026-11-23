@@ -104,15 +104,19 @@ class TransferExecutor(
         TransferOutcome.Failed(messages.keyMissing)
     }
 
+    /**
+     * A row with no file, no index entry or no local path can never succeed; retrying it only
+     * fills the failed list, which is what a queue looked like after an index rebuild.
+     */
     private suspend fun executeUpload(transfer: TransferEntity): TransferOutcome {
         val fileId = transfer.fileId
-            ?: return TransferOutcome.Failed(messages.noFileReference)
+            ?: return TransferOutcome.Abandoned(messages.noFileReference)
         val entity = fileDao.byId(fileId)
-            ?: return TransferOutcome.Failed(messages.fileRecordMissing)
+            ?: return TransferOutcome.Abandoned(messages.fileRecordMissing)
         val localPath = entity.localPath
-            ?: return TransferOutcome.Failed(messages.noLocalCopy)
+            ?: return TransferOutcome.Abandoned(messages.noLocalCopy)
         val sourceFile = File(localPath)
-        if (!sourceFile.exists()) return TransferOutcome.Failed(messages.localFileGone)
+        if (!sourceFile.exists()) return TransferOutcome.Abandoned(messages.localFileGone)
 
         val prefs = settingsRepository.preferences.first()
         val chatId = transfer.chatId
