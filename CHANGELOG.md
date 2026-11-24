@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.2.0
+
+This is 1.1.9 plus the background backup work, so install this one instead of 1.1.9.
+
+**Background backup**
+
+* **The CPU is held awake while uploading.** WorkManager only keeps the device awake while it lets
+  the worker run; a screen-off phone could still have the CPU pulled away mid-upload. The transfer
+  worker now holds a partial wake lock for the duration, with a three hour cap so nothing can stick.
+* **No more silent ten-minute cut.** Uploads need a foreground slot; if the system refuses one the
+  worker used to run blind and get stopped. It now falls back to an untyped foreground service and,
+  if that also fails, retries later instead of half-uploading a file.
+* **A queue watchdog every fifteen minutes.** A queued row only moves when something kicks the queue.
+  If that single kick was ever lost — process killed between enqueue and run, an aggressive OEM
+  freeze, expedited quota used up — the queue would sit still until the app was opened. The watchdog
+  checks for queued rows and kicks again, so a stuck queue repairs itself.
+
+**Everything from 1.1.9 stays**
+
+* Delete asks Both / Cloud only / Phone only, always through Trash.
+* Share works for files that exist only in the cloud.
+* Failed rows from deleted files are cleaned up when Home opens; **Clear failed** clears the rest.
+* Permanent upload errors are abandoned instead of retried.
+* Favourite sync with the phone gallery.
+
 ## 1.1.9
 
 * **Delete now asks which copy goes.** Select files, tap Delete, and choose **Both**, **Cloud only**
@@ -12,7 +37,12 @@
 * **Failed uploads stop retrying forever.** A queue row with no file, no index entry or no local path
   can never succeed, so it is abandoned instead of being retried. This is what left rows failing
   again and again after an index rebuild.
-* **Clear failed** in the Transfers menu drops failed rows in one tap. The files are not touched.
+* **Leftovers from deleted files are cleaned up automatically.** A file deleted from the phone left a
+  FAILED record behind, and nothing ever cleared it — Home kept showing "7 failed" and offered to back
+  up files that no longer exist. Opening Home now repairs that list: rows whose copy is in the channel
+  are marked backed up, rows that were never uploaded are dropped, and the queue rows that belong to
+  them go with them. No button to press.
+* **Clear failed** in the Transfers menu drops the remaining failed rows in one tap. Files untouched.
 * **The main buttons are visible instead of buried in the ⋮ menu.** Files and the gallery both show
   Select all, Share and Delete in the selection bar; move, copy, rename and the rest stay in ⋮.
 

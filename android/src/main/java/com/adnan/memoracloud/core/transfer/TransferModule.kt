@@ -13,6 +13,7 @@ val transferModule = module {
     singleOf(::WorkMaintenanceScheduler) bind MaintenanceScheduler::class
     singleOf(::MediaTriggerScheduler)
     singleOf(::WorkTransferScheduler) bind TransferScheduler::class
+    singleOf(::TransferWakeLock)
     singleOf(::WorkBackupResumeScheduler) bind BackupResumeScheduler::class
     single { MediaStoreWatcher(androidContext(), get(), lazy { get<BackupRepository>() }) }
     workerOf(::BackupResumeWorker)
@@ -21,5 +22,6 @@ val transferModule = module {
     workerOf(::MediaWatchWorker)
     workerOf(::ScheduledBackupWorker)
     workerOf(::TransferQueueWorker)
+    workerOf(::QueueWatchdogWorker)
     workerOf(::TrashCleanupWorker)
 }

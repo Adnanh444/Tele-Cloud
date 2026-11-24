@@ -28,6 +28,10 @@ Last updated: Part 4 (restore wizard; AI removed).
 | Recovery with same account + channel | ✅ | cloud manifest + index snapshot rebuild |
 | Delete asks Both / Cloud only / Phone only, always via Trash | ✅ | `DeleteScope`, `DeleteScopeDialog` |
 | Share a cloud-only file (downloads first, then shares) | ✅ | `FilesViewModel.shareSelected`, gallery too |
+| Wake lock held for the whole drain (screen-off safe) | ✅ | `TransferWakeLock`, `TransferQueueWorker` |
+| Foreground fallback + retry instead of a silent cut | ✅ | `TransferQueueWorker.promoteToForeground` |
+| Queue watchdog re-kicks lost queues every 15 min | ✅ | `QueueWatchdogWorker` |
+| Deleted-file leftovers repaired on Home open | ✅ | `TransferRepositoryImpl.repairDeadFailures` |
 | Failed queue rows abandoned + **Clear failed** | ✅ | `TransferExecutor`, `TransferDao.clearFailed` |
 | Favourite sync with the device gallery (`IS_FAVORITE`) + one-tap import | ✅ | `DeviceFavorites`, `MediaStoreFavorites` |
 | Queue recovery after a killed process (no stuck rows) | ✅ | `TransferDao.resetStaleRunning`, `recoverStale()` |

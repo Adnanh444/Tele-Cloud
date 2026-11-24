@@ -162,6 +162,20 @@ interface TransferDao {
     @Query("DELETE FROM transfers WHERE state = 'FAILED'")
     suspend fun clearFailed()
 
+    /** Rows that are waiting for a worker to pick them up. */
+    @Query("SELECT COUNT(*) FROM transfers WHERE state = 'QUEUED'")
+    suspend fun countQueued(): Int
+
+    @Query("DELETE FROM transfers WHERE fileId IN (:fileIds)")
+    suspend fun deleteForFiles(fileIds: List<String>)
+
+    /** Failed rows whose file record is gone can never run again. */
+    @Query(
+        """DELETE FROM transfers WHERE state = 'FAILED'
+           AND (fileId IS NULL OR fileId NOT IN (SELECT id FROM files))"""
+    )
+    suspend fun purgeFailedWithoutFile()
+
     @Query(
         """UPDATE transfers SET state = 'PAUSED', updatedAt = :now
            WHERE state IN ('QUEUED', 'RUNNING')"""

@@ -45,8 +45,33 @@ class TransferRepositoryImpl(
 
     override suspend fun recoverStale(): Int {
         val now = System.currentTimeMillis()
-        return runCatching { transferDao.resetStaleRunning(now - STALE_RUNNING_MS, now) }
+        val requeued = runCatching { transferDao.resetStaleRunning(now - STALE_RUNNING_MS, now) }
             .getOrDefault(0)
+        runCatching { repairDeadFailures() }
+        return requeued
+    }
+
+    /**
+     * A file deleted from the phone leaves a FAILED row behind and nothing ever cleared it, so Home
+     * kept offering to back up files that no longer exist. A row whose local copy is gone but whose
+     * message id is known is simply backed up; a row that was never uploaded has no copy anywhere, so
+     * it is dropped.
+     */
+    private suspend fun repairDeadFailures() {
+        val failed = fileDao.failedFiles()
+        if (failed.isEmpty()) return
+        val dead = failed.filter { entity ->
+            val path = entity.localPath
+            path == null || !File(path).exists()
+        }
+        if (dead.isEmpty()) return
+        val backedUp = dead.filter { it.messageId != null }.map { it.id }
+        val phantom = dead.filter { it.messageId == null }.map { it.id }
+        if (backedUp.isNotEmpty()) fileDao.markBackedUpWithoutLocalCopy(backedUp)
+        if (phantom.isNotEmpty()) fileDao.deleteByIds(phantom)
+        transferDao.deleteForFiles(dead.map { it.id })
+        transferDao.purgeFailedWithoutFile()
+        SafeLog.d(TAG, "Repaired ${dead.size} failed rows left by deleted files")
     }
 
     override fun observeSection(

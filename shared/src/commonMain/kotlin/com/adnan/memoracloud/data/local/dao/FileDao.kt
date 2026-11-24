@@ -392,6 +392,14 @@ interface FileDao {
     @Query("DELETE FROM files WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<String>)
 
+    /** Rows Home counts as failed; a few are left over from files that were deleted afterwards. */
+    @Query("SELECT * FROM files WHERE trashedAt IS NULL AND backupState = 'FAILED'")
+    suspend fun failedFiles(): List<FileEntity>
+
+    /** The copy is in the channel, only the phone copy went away, so the row is backed up again. */
+    @Query("UPDATE files SET backupState = 'BACKED_UP', localPath = NULL WHERE id IN (:ids)")
+    suspend fun markBackedUpWithoutLocalCopy(ids: List<String>)
+
     @Query(
         """SELECT * FROM files
            WHERE folderId = :folderId AND trashedAt IS NULL

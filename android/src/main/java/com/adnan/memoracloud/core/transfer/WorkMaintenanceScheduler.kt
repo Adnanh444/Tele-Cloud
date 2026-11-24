@@ -82,6 +82,14 @@ class WorkMaintenanceScheduler(
             workManager.cancelUniqueWork(ScheduledBackupWorker.UNIQUE_NAME)
         }
 
+        // Always on: it costs one query per run and repairs a queue whose kick was lost.
+        workManager.enqueueUniquePeriodicWork(
+            QueueWatchdogWorker.UNIQUE_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<QueueWatchdogWorker>(WATCHDOG_INTERVAL_MINUTES, TimeUnit.MINUTES)
+                .build()
+        )
+
         scheduleUpdateCheck(updateChecks)
 
         workManager.enqueueUniquePeriodicWork(
@@ -100,5 +108,6 @@ class WorkMaintenanceScheduler(
     private companion object {
         /** Fast path is the media trigger; this is the floor under it. */
         const val SWEEP_INTERVAL_MINUTES = 60L
+        const val WATCHDOG_INTERVAL_MINUTES = 15L
     }
 }

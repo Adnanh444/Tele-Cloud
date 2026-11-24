@@ -10,6 +10,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.adnan.memoracloud.R
 import com.adnan.memoracloud.core.common.AppNotifications
+import com.adnan.memoracloud.core.common.SafeLog
 import com.adnan.memoracloud.core.telegram.TelegramSession
 import com.adnan.memoracloud.data.local.dao.TransferDao
 import com.adnan.memoracloud.data.local.entity.TransferEntity
@@ -31,16 +32,45 @@ class TransferQueueWorker(
     private val settingsRepository: SettingsRepository,
     private val appNotifications: AppNotifications,
     private val transferDao: TransferDao,
-    private val telegramSession: TelegramSession
+    private val telegramSession: TelegramSession,
+    private val transferWakeLock: TransferWakeLock
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         if (!drainer.hasRunnableWork()) return Result.success()
         if (!telegramSession.ensureReady()) return Result.retry()
         appNotifications.createChannels()
-        runCatching { setForeground(getForegroundInfo()) }
 
-        val result = coroutineScope {
+        // Without a foreground slot the system stops the worker at the ten minute mark, so retry
+        // instead of starting uploads that will be cut in half.
+        if (!promoteToForeground(getForegroundInfo())) {
+            SafeLog.w(TAG, "No foreground slot available, retrying later")
+            return Result.retry()
+        }
+
+        val wakeLock = transferWakeLock.acquire(WAKE_LOCK_TIMEOUT_MS)
+        val result = try {
+            drainQueue()
+        } finally {
+            transferWakeLock.release(wakeLock)
+        }
+        return when (result) {
+            TransferDrainResult.COMPLETED -> Result.success()
+            TransferDrainResult.INTERRUPTED -> Result.retry()
+        }
+    }
+
+    /** Typed foreground first, plain second: the type is what Android 14 rejects when it is wrong. */
+    private suspend fun promoteToForeground(info: ForegroundInfo): Boolean {
+        if (runCatching { setForeground(info) }.isSuccess) return true
+        val fallback = ForegroundInfo(
+            AppNotifications.NOTIFICATION_ID_TRANSFER_QUEUE,
+            info.notification
+        )
+        return runCatching { setForeground(fallback) }.isSuccess
+    }
+
+    private suspend fun drainQueue(): TransferDrainResult = coroutineScope {
             val progress = launch { showProgress() }
             drainer.drain(
                 isStopped = { isStopped },
@@ -61,11 +91,6 @@ class TransferQueueWorker(
                     }
                 }
             ).also { progress.cancel() }
-        }
-        return when (result) {
-            TransferDrainResult.COMPLETED -> Result.success()
-            TransferDrainResult.INTERRUPTED -> Result.retry()
-        }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo = foregroundInfo(
@@ -165,7 +190,9 @@ class TransferQueueWorker(
 
     companion object {
         const val UNIQUE_NAME = "transfer_queue"
+        private const val TAG = "TransferQueueWorker"
         private const val QUEUE_REQUEST_CODE = 3
+        private const val WAKE_LOCK_TIMEOUT_MS = 3 * 60 * 60 * 1000L
         private const val PROGRESS_ROW_LIMIT = 1000
         private const val PROGRESS_INTERVAL_MS = 1_000L
     }

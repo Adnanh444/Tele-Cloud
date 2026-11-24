@@ -71,6 +71,14 @@ class HomeViewModel(
     private val publishScheduler: PublishScheduler
 ) : ViewModel() {
 
+    /**
+     * Home is the first screen, so the leftovers of files that were deleted from the phone are
+     * cleaned up here: the failed count has to be honest before anyone taps "Back up".
+     */
+    init {
+        viewModelScope.launch { transferRepository.recoverStale() }
+    }
+
     private val missingPermissions = MutableStateFlow(permissionChecker.missingCritical())
     private val _scanning = MutableStateFlow(false)
     private val _messages = MutableSharedFlow<UiText>(extraBufferCapacity = 4)
